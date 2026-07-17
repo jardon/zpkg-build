@@ -1,11 +1,11 @@
-module github.com/zpkg-build/zpkg-build
+module github.com/jardon/zpkg-build
 
 go 1.25.0
 
 require (
 	github.com/containers/podman/v5 v5.8.5
+	github.com/docker/docker v28.5.1+incompatible
 	github.com/lxc/go-lxc v0.0.0-20260316180011-3af4ce000ed7
-	github.com/moby/moby v28.5.2+incompatible
 	github.com/spf13/cobra v1.10.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -38,7 +38,6 @@ require (
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v28.5.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.4 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
