@@ -41,6 +41,6 @@ func GetPlugin(source PluginSource) Plugin {
 	case "none", "":
 		return &NoOpPlugin{source: source}
 	default:
-		return &GenericPlugin{source: source}
+		return &NoOpPlugin{source: source}
 	}
 }
