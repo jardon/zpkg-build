@@ -7,9 +7,9 @@ type MavenPlugin struct {
 func (p *MavenPlugin) Name() string    { return "maven" }
 func (p *MavenPlugin) Version() string { return p.source.Version }
 
-func (p *MavenPlugin) GetInstallScripts(baseOS string) []string {
+func (p *MavenPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"tar -xzf /opt/plugin/toolchain.tar.gz -C /usr/share/",
+		"tar -xzf " + archivePath + " -C /usr/share/",
 	}
 }
 

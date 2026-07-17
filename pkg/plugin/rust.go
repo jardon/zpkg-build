@@ -7,9 +7,9 @@ type RustPlugin struct {
 func (p *RustPlugin) Name() string    { return "rust" }
 func (p *RustPlugin) Version() string { return p.source.Version }
 
-func (p *RustPlugin) GetInstallScripts(baseOS string) []string {
+func (p *RustPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"tar -xzf /opt/plugin/toolchain.tar.gz -C /usr/local/",
+		"tar -xzf " + archivePath + " -C /usr/local/",
 	}
 }
 

@@ -7,16 +7,16 @@ type PoetryPlugin struct {
 func (p *PoetryPlugin) Name() string    { return "poetry" }
 func (p *PoetryPlugin) Version() string { return p.source.Version }
 
-func (p *PoetryPlugin) GetInstallScripts(baseOS string) []string {
+func (p *PoetryPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"pip install poetry",
+		"tar -xzf " + archivePath + " -C /usr/local/",
 	}
 }
 
 func (p *PoetryPlugin) GetEnvVars() map[string]string {
 	return map[string]string{
-		"POETRY_HOME":      "/usr/local/poetry",
-		"POETRY_CACHE_DIR": "/workspace/.cache/pypoetry",
+		"PATH":       "/usr/local/bin:/usr/local/poetry/bin:$PATH",
+		"POETRY_HOME": "/usr/local/poetry",
 	}
 }
 

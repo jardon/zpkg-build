@@ -7,15 +7,15 @@ type MesonPlugin struct {
 func (p *MesonPlugin) Name() string    { return "meson" }
 func (p *MesonPlugin) Version() string { return p.source.Version }
 
-func (p *MesonPlugin) GetInstallScripts(baseOS string) []string {
+func (p *MesonPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"pip install meson ninja",
+		"tar -xzf " + archivePath + " -C /usr/local/",
 	}
 }
 
 func (p *MesonPlugin) GetEnvVars() map[string]string {
 	return map[string]string{
-		"PATH": "/usr/local/bin:$PATH",
+		"PATH": "/usr/local/bin:/usr/local/meson/bin:$PATH",
 	}
 }
 

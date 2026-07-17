@@ -7,9 +7,9 @@ type GoPlugin struct {
 func (p *GoPlugin) Name() string    { return "golang" }
 func (p *GoPlugin) Version() string { return p.source.Version }
 
-func (p *GoPlugin) GetInstallScripts(baseOS string) []string {
+func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"tar -xzf /opt/plugin/toolchain.tar.gz -C /usr/local/",
+		"tar -xzf " + archivePath + " -C /usr/local/",
 	}
 }
 

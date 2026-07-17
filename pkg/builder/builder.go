@@ -300,12 +300,31 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 		{HostPath: b.exportDir(), ContainerPath: "/zpkg-build-workspace/export"},
 	}
 
+	var guestArchivePath string
+	if b.activePlugin.Name() != "none" && b.activePlugin.Name() != "" {
+		pluginCacheDir := filepath.Join(b.cacheDir, "cache")
+		hostArchivePath, err := plugin.ResolveAndStage(b.manifest.Plugin, pluginCacheDir)
+		if err != nil {
+			return fmt.Errorf("failed to resolve plugin source: %w", err)
+		}
+
+		archiveDir := filepath.Dir(hostArchivePath)
+		archiveName := filepath.Base(hostArchivePath)
+		guestArchivePath = "/opt/plugin/" + archiveName
+
+		mounts = append(mounts, engine.Mount{
+			HostPath:      archiveDir,
+			ContainerPath: "/opt/plugin",
+			ReadOnly:      true,
+		})
+	}
+
 	if err := eng.CreateEnvironment(ctx, b.manifest.Base, mounts); err != nil {
 		return err
 	}
 	defer eng.Destroy(ctx)
 
-	installScripts := b.activePlugin.GetInstallScripts(b.manifest.Base)
+	installScripts := b.activePlugin.GetInstallScripts(guestArchivePath)
 	for _, script := range installScripts {
 		fmt.Printf("    Installing plugin: %s\n", script)
 		if err := eng.Run(ctx, engine.RunConfig{
