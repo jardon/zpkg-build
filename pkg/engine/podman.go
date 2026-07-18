@@ -6,10 +6,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/containers/podman/v5/pkg/api/handlers"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/specgen"
+	dockerContainer "github.com/docker/docker/api/types/container"
+	spec "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type PodmanEngine struct {
@@ -18,9 +21,7 @@ type PodmanEngine struct {
 }
 
 func NewPodmanEngine(socketPath string) *PodmanEngine {
-	return &PodmanEngine{
-		socketPath: socketPath,
-	}
+	return &PodmanEngine{}
 }
 
 func (p *PodmanEngine) Name() string {
@@ -28,10 +29,6 @@ func (p *PodmanEngine) Name() string {
 }
 
 func (p *PodmanEngine) resolveSocketPath() string {
-	if p.socketPath != "" {
-		return p.socketPath
-	}
-
 	if uid := os.Getuid(); uid != 0 {
 		return fmt.Sprintf("unix:///run/user/%d/podman/podman.sock", uid)
 	}
@@ -51,9 +48,11 @@ func (p *PodmanEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 	}
 
 	s := specgen.NewSpecGenerator(baseImage, false)
-	s.Terminal = false
-	s.ContainerSecurityConfig.CapDrop = []string{"ALL"}
-	s.ContainerSecurityConfig.NoNewPrivileges = true
+	f := false
+	t := false
+	s.Terminal = &f
+	s.NoNewPrivileges = &t
+	s.CapDrop = []string{"ALL"}
 
 	for _, m := range mounts {
 		mode := "rw"
@@ -63,7 +62,7 @@ func (p *PodmanEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 		if m.SELinuxLabel {
 			mode += ",Z"
 		}
-		s.Mounts = append(s.Mounts, specgen.Mount{
+		s.Mounts = append(s.Mounts, spec.Mount{
 			Type:        "bind",
 			Source:      m.HostPath,
 			Destination: m.ContainerPath,
@@ -98,29 +97,36 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 
 		args := strings.Fields(cmd)
 
-		execConfig := new(containers.ExecStartAndAttachOptions)
-		execConfig.WithAttachStdout(true).WithAttachStderr(true)
-
-		createConfig := new(containers.ExecCreateConfig)
-		createConfig.WithCmd(args).WithWorkingDir(config.WorkingDir)
-
 		var envList []string
 		for k, v := range config.EnvVars {
 			envList = append(envList, fmt.Sprintf("%s=%s", k, v))
 		}
-		createConfig.WithEnv(envList)
+
+		createConfig := &handlers.ExecCreateConfig{
+			ExecOptions: dockerContainer.ExecOptions{
+				AttachStdout: true,
+				AttachStderr: true,
+				Cmd:          args,
+				WorkingDir:   config.WorkingDir,
+				Env:          envList,
+			},
+		}
 
 		execID, err := containers.ExecCreate(p.socketConn, p.containerID, createConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create exec session for '%s': %w", cmd, err)
 		}
 
-		err = containers.ExecStartAndAttach(p.socketConn, execID, execConfig)
+		execOpts := new(containers.ExecStartAndAttachOptions)
+		t := true
+		execOpts.AttachOutput = &t
+		execOpts.AttachError = &t
+		err = containers.ExecStartAndAttach(p.socketConn, execID, execOpts)
 		if err != nil {
 			return fmt.Errorf("execution error on command '%s': %w", cmd, err)
 		}
 
-		inspect, err := containers.ExecInspect(p.socketConn, execID)
+		inspect, err := containers.ExecInspect(p.socketConn, execID, nil)
 		if err != nil {
 			return fmt.Errorf("failed to inspect session status: %w", err)
 		}
@@ -137,10 +143,18 @@ func (p *PodmanEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) er
 		return fmt.Errorf("environment not initialized")
 	}
 
-	copyOpts := new(containers.CopyOptions)
-	err := containers.CopyToContainer(p.socketConn, p.containerID, hostSrc, guestDest, copyOpts)
+	tarReader, err := tarArchive(hostSrc)
+	if err != nil {
+		return fmt.Errorf("failed to create tar archive: %w", err)
+	}
+	defer tarReader.Close()
+
+	copyFunc, err := containers.CopyFromArchive(p.socketConn, p.containerID, guestDest, tarReader)
 	if err != nil {
 		return fmt.Errorf("failed to copy files into podman environment: %w", err)
+	}
+	if err := copyFunc(); err != nil {
+		return fmt.Errorf("failed to apply copy: %w", err)
 	}
 	return nil
 }
@@ -150,11 +164,28 @@ func (p *PodmanEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 		return fmt.Errorf("environment not initialized")
 	}
 
-	copyOpts := new(containers.CopyOptions)
-	err := containers.CopyFromContainer(p.socketConn, p.containerID, guestSrc, hostDest, copyOpts)
+	pr, pw, err := os.Pipe()
 	if err != nil {
+		return fmt.Errorf("failed to create pipe: %w", err)
+	}
+
+	copyFunc, err := containers.CopyToArchive(p.socketConn, p.containerID, guestSrc, pw)
+	if err != nil {
+		pw.Close()
+		pr.Close()
 		return fmt.Errorf("failed to extract outputs from podman environment: %w", err)
 	}
+
+	go func() {
+		copyFunc()
+		pw.Close()
+	}()
+
+	if err := extractTar(pr, hostDest); err != nil {
+		pr.Close()
+		return fmt.Errorf("failed to extract tar: %w", err)
+	}
+	pr.Close()
 	return nil
 }
 
@@ -163,12 +194,11 @@ func (p *PodmanEngine) Destroy(ctx context.Context) error {
 		return nil
 	}
 
-	force := true
 	stopOpts := new(containers.StopOptions)
 	_ = containers.Stop(p.socketConn, p.containerID, stopOpts)
 
 	removeOpts := new(containers.RemoveOptions)
-	removeOpts.WithForce(force).WithVolumes(true)
+	removeOpts.WithForce(true).WithVolumes(true)
 	_, err := containers.Remove(p.socketConn, p.containerID, removeOpts)
 
 	p.containerID = ""
