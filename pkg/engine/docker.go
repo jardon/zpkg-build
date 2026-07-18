@@ -123,9 +123,12 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 			continue
 		}
 
-		env := []string{}
-		for k, v := range config.EnvVars {
-			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		var env []string
+		if len(config.EnvVars) > 0 {
+			env = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+			for k, v := range config.EnvVars {
+				env = append(env, fmt.Sprintf("%s=%s", k, v))
+			}
 		}
 
 		execCfg := container.ExecOptions{
