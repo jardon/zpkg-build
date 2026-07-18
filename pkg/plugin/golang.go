@@ -16,16 +16,16 @@ func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
 func (p *GoPlugin) GetEnvVars() map[string]string {
 	return map[string]string{
 		"PATH":    "/usr/local/go/bin:$PATH",
-		"GOPATH":  "/go",
-		"GOCACHE": "/workspace/.cache/go-build",
+		"GOPATH":  "/zpkg-build-workspace/gopath",
+		"GOCACHE": "/zpkg-build-workspace/cache/go-build",
 		"GOROOT":  "/usr/local/go",
 	}
 }
 
 func (p *GoPlugin) GetCacheDirectories() []PackageCache {
 	return []PackageCache{
-		{HostSubdir: "go-mod", GuestPath: "/go/pkg/mod"},
-		{HostSubdir: "go-build", GuestPath: "/workspace/.cache/go-build"},
+		{HostSubdir: "go-mod", GuestPath: "/zpkg-build-workspace/gopath/pkg/mod"},
+		{HostSubdir: "go-build", GuestPath: "/zpkg-build-workspace/cache/go-build"},
 	}
 }
 
