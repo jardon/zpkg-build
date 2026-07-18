@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - cmd/**
+      - pkg/**
+      - .github/workflows/**
+      - go.mod
+      - go.sum
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-binary:
+    name: build binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y podman libbtrfs-dev libgpgme-dev libgpgme-dev lxc-dev lxc
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.0'
+      - run: go build -o zpkg-build ./cmd/zpkg-build/main.go
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zpkg-build
+          path: .
+
