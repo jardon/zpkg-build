@@ -90,6 +90,8 @@ func (b *Builder) setupWorkspace() error {
 			return fmt.Errorf("failed to create workspace directory %s: %w", dir, err)
 		}
 	}
+	cmd := exec.Command("chmod", "-R", "0777", b.workspace)
+	cmd.Run()
 
 	return nil
 }
@@ -565,11 +567,11 @@ func (b *Builder) Clean(step string) error {
 			}
 		}
 		if found || s == targetStep {
-			for _, dir := range dirsToClean[s] {
-				fmt.Printf("    Cleaning: %s\n", dir)
-				_ = os.RemoveAll(dir)
-				_ = os.MkdirAll(dir, 0755)
-			}
+	for _, dir := range dirsToClean[s] {
+		fmt.Printf("    Cleaning: %s\n", dir)
+		_ = os.RemoveAll(dir)
+		_ = os.MkdirAll(dir, 0777)
+	}
 		}
 	}
 
