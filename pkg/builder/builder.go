@@ -60,14 +60,13 @@ func (b *Builder) loadManifest() error {
 	}
 	b.rawRecipe = rawRecipe
 
-	b.activePlugin = plugin.GetPlugin(b.manifest.Plugin)
-
-	m, recipeHash, _, err := manifest.LoadAndHydrateManifest(b.manifestPath, b.activePlugin)
+	m, recipeHash, _, err := manifest.LoadAndHydrateManifest(b.manifestPath, nil)
 	if err != nil {
 		return err
 	}
 
 	b.manifest = m
+	b.activePlugin = plugin.GetPlugin(b.manifest.Plugin)
 	b.recipeHash = recipeHash
 
 	return nil
