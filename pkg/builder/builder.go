@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/jardon/zpkg-build/pkg/config"
 	"github.com/jardon/zpkg-build/pkg/engine"
@@ -90,6 +91,20 @@ func (b *Builder) setupWorkspace() error {
 			return fmt.Errorf("failed to create workspace directory %s: %w", dir, err)
 		}
 	}
+
+	uid := os.Getuid()
+	gid := os.Getgid()
+	filepath.Walk(b.workspace, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			if int(stat.Uid) != uid || int(stat.Gid) != gid {
+				os.Chown(path, uid, gid)
+			}
+		}
+		return nil
+	})
 
 	return nil
 }
@@ -293,10 +308,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	b.engine = eng
 
 	mounts := []engine.Mount{
-		{HostPath: b.buildDir(), ContainerPath: "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"},
-		{HostPath: b.destDir(), ContainerPath: "/zpkg-build-workspace/parts/" + b.manifest.Name + "/dest"},
-		{HostPath: b.pkgDir(), ContainerPath: "/zpkg-build-workspace/pkg"},
-		{HostPath: b.exportDir(), ContainerPath: "/zpkg-build-workspace/export"},
+		{HostPath: b.workspace, ContainerPath: "/zpkg-build-workspace"},
 	}
 
 	var guestArchivePath string
@@ -562,11 +574,11 @@ func (b *Builder) Clean(step string) error {
 			}
 		}
 		if found || s == targetStep {
-			for _, dir := range dirsToClean[s] {
-				fmt.Printf("    Cleaning: %s\n", dir)
-				_ = os.RemoveAll(dir)
-				_ = os.MkdirAll(dir, 0755)
-			}
+	for _, dir := range dirsToClean[s] {
+		fmt.Printf("    Cleaning: %s\n", dir)
+		_ = os.RemoveAll(dir)
+		_ = os.MkdirAll(dir, 0755)
+	}
 		}
 	}
 

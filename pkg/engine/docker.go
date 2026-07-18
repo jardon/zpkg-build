@@ -19,6 +19,7 @@ import (
 type DockerEngine struct {
 	client      *client.Client
 	containerID string
+	baseEnv     map[string]string
 }
 
 func NewDockerEngine(socketPath string) *DockerEngine {
@@ -88,6 +89,7 @@ func (d *DockerEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 	containerCfg := &container.Config{
 		Image: baseImage,
 		Cmd:   []string{"sleep", "infinity"},
+		User:  fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 	}
 
 	hostCfg := &container.HostConfig{
@@ -118,20 +120,35 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 		return fmt.Errorf("environment not initialized")
 	}
 
+	if d.baseEnv == nil {
+		d.baseEnv = d.getContainerEnv(ctx)
+	}
+
 	for _, cmdStr := range config.Commands {
 		if strings.TrimSpace(cmdStr) == "" {
 			continue
 		}
 
-		env := []string{}
+		merged := make(map[string]string)
+		for k, v := range d.baseEnv {
+			merged[k] = v
+		}
 		for k, v := range config.EnvVars {
-			env = append(env, fmt.Sprintf("%s=%s", k, v))
+			merged[k] = v
 		}
 
+		var exports []string
+		for k, v := range merged {
+			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
+		}
+		fullCmd := strings.Join(exports, "; ")
+		if config.WorkingDir != "" {
+			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+		}
+		fullCmd += "; " + cmdStr
+
 		execCfg := container.ExecOptions{
-			Cmd:          []string{"sh", "-c", cmdStr},
-			WorkingDir:   config.WorkingDir,
-			Env:          env,
+			Cmd:          []string{"sh", "-c", fullCmd},
 			AttachStdout: true,
 			AttachStderr: true,
 		}
@@ -159,6 +176,24 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 	}
 
 	return nil
+}
+
+func (d *DockerEngine) getContainerEnv(ctx context.Context) map[string]string {
+	envMap := make(map[string]string)
+
+	inspect, err := d.client.ContainerInspect(ctx, d.containerID)
+	if err != nil {
+		return envMap
+	}
+
+	for _, e := range inspect.Config.Env {
+		parts := strings.SplitN(e, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	return envMap
 }
 
 func (d *DockerEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
