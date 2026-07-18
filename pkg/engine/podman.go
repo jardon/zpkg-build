@@ -101,8 +101,6 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 			continue
 		}
 
-		args := []string{"sh", "-c", cmd}
-
 		merged := make(map[string]string)
 		for k, v := range p.baseEnv {
 			merged[k] = v
@@ -111,18 +109,23 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 			merged[k] = resolveEnvVarRefs(v, p.baseEnv)
 		}
 
-		var envList []string
+		var exports []string
 		for k, v := range merged {
-			envList = append(envList, fmt.Sprintf("%s=%s", k, v))
+			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
 		}
+		fullCmd := strings.Join(exports, "; ")
+		if config.WorkingDir != "" {
+			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+		}
+		fullCmd += "; " + cmd
+
+		args := []string{"sh", "-c", fullCmd}
 
 		createConfig := &handlers.ExecCreateConfig{
 			ExecOptions: dockerContainer.ExecOptions{
 				AttachStdout: true,
 				AttachStderr: true,
 				Cmd:          args,
-				WorkingDir:   config.WorkingDir,
-				Env:          envList,
 			},
 		}
 
