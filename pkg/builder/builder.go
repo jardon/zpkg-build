@@ -293,10 +293,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	b.engine = eng
 
 	mounts := []engine.Mount{
-		{HostPath: b.buildDir(), ContainerPath: "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"},
-		{HostPath: b.destDir(), ContainerPath: "/zpkg-build-workspace/parts/" + b.manifest.Name + "/dest"},
-		{HostPath: b.pkgDir(), ContainerPath: "/zpkg-build-workspace/pkg"},
-		{HostPath: b.exportDir(), ContainerPath: "/zpkg-build-workspace/export"},
+		{HostPath: b.workspace, ContainerPath: "/zpkg-build-workspace"},
 	}
 
 	var guestArchivePath string
