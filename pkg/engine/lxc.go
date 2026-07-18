@@ -20,8 +20,13 @@ type LXCEngine struct {
 }
 
 func NewLXCEngine(socketPath string) *LXCEngine {
+	configDir := os.Getenv("LXC_DIR")
+	if configDir == "" {
+		home, _ := os.UserHomeDir()
+		configDir = filepath.Join(home, ".local", "share", "lxc")
+	}
 	return &LXCEngine{
-		configDir: "/var/lib/lxc",
+		configDir: configDir,
 	}
 }
 
