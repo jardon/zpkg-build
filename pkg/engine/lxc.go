@@ -265,16 +265,9 @@ func (l *LXCEngine) setupUnprivileged() error {
 		return err
 	}
 
-	// Ensure parent directories of configDir have no execute permission
-	// This is a security requirement for unprivileged LXC containers
-	dirs := []string{
-		home,
-		filepath.Join(home, ".local"),
-		filepath.Join(home, ".local", "share"),
-		filepath.Join(home, ".local", "share", "lxc"),
-	}
-	for _, dir := range dirs {
-		os.Chmod(dir, 0755&^0111)
+	// Ensure configDir exists with proper permissions
+	if err := os.MkdirAll(l.configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create LXC config directory: %w", err)
 	}
 
 	// Ensure user LXC config exists
