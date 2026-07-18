@@ -108,7 +108,7 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 			merged[k] = v
 		}
 		for k, v := range config.EnvVars {
-			merged[k] = v
+			merged[k] = resolveEnvVarRefs(v, p.baseEnv)
 		}
 
 		var envList []string
@@ -168,6 +168,30 @@ func (p *PodmanEngine) getContainerEnv(ctx context.Context) map[string]string {
 		}
 	}
 	return env
+}
+
+func resolveEnvVarRefs(val string, baseEnv map[string]string) string {
+	for {
+		idx := strings.Index(val, "$")
+		if idx == -1 {
+			break
+		}
+		rest := val[idx+1:]
+		varNameEnd := 0
+		for varNameEnd < len(rest) && ((rest[varNameEnd] >= 'A' && rest[varNameEnd] <= 'Z') || (rest[varNameEnd] >= 'a' && rest[varNameEnd] <= 'z') || (rest[varNameEnd] >= '0' && rest[varNameEnd] <= '9') || rest[varNameEnd] == '_') {
+			varNameEnd++
+		}
+		if varNameEnd == 0 {
+			break
+		}
+		varName := rest[:varNameEnd]
+		resolved, ok := baseEnv[varName]
+		if !ok {
+			resolved = ""
+		}
+		val = val[:idx] + resolved + rest[varNameEnd:]
+	}
+	return val
 }
 
 func (p *PodmanEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
