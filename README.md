@@ -90,5 +90,13 @@ export:
 ## Dependencies
 
 ```bash
-sudo apt install -y libbtrfs-dev libgpgme-dev lxc-dev
+# Core build dependencies
+sudo apt install -y libbtrfs-dev libgpgme-dev
+
+# LXC engine (if using lxc)
+sudo apt install -y lxc-dev uidmap
+
+# For unprivileged LXC containers, configure subordinate uid/gid:
+echo "$(whoami):100000:65536" | sudo tee -a /etc/subuid
+echo "$(whoami):100000:65536" | sudo tee -a /etc/subgid
 ```

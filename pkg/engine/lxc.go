@@ -3,11 +3,14 @@
 package engine
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	lxc "github.com/lxc/go-lxc"
@@ -35,6 +38,10 @@ func (l *LXCEngine) Name() string {
 }
 
 func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error {
+	if err := l.setupUnprivileged(); err != nil {
+		return fmt.Errorf("failed to setup unprivileged containers: %w", err)
+	}
+
 	l.containerName = fmt.Sprintf("zpkg-build-%d", os.Getpid())
 	containerPath := filepath.Join(l.configDir, l.containerName)
 
@@ -61,6 +68,19 @@ func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mou
 	}); err != nil {
 		return fmt.Errorf("failed to create LXC template: %w", err)
 	}
+
+	subuid, subuidCount, err := parseSubordinate("subuid")
+	if err != nil {
+		return fmt.Errorf("failed to parse /etc/subuid: %w", err)
+	}
+
+	subgid, subgidCount, err := parseSubordinate("subgid")
+	if err != nil {
+		return fmt.Errorf("failed to parse /etc/subgid: %w", err)
+	}
+
+	l.lxcContainer.SetConfigItem("lxc.idmap", fmt.Sprintf("u 0 %d %d", subuid, subuidCount))
+	l.lxcContainer.SetConfigItem("lxc.idmap", fmt.Sprintf("g 0 %d %d", subgid, subgidCount))
 
 	for _, m := range mounts {
 		options := "bind"
@@ -197,4 +217,96 @@ func (l *LXCEngine) releaseFromImage(image string) string {
 		release = release[:idx]
 	}
 	return release
+}
+
+func parseSubordinate(name string) (int, int, error) {
+	file, err := os.Open("/etc/" + name)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer file.Close()
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 3)
+		if len(parts) < 3 {
+			continue
+		}
+
+		if parts[0] == currentUser.Username {
+			start, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return 0, 0, fmt.Errorf("invalid subordinate start %q: %w", parts[1], err)
+			}
+			count, err := strconv.Atoi(parts[2])
+			if err != nil {
+				return 0, 0, fmt.Errorf("invalid subordinate count %q: %w", parts[2], err)
+			}
+			return start, count, nil
+		}
+	}
+
+	return 0, 0, fmt.Errorf("no entry for %s in /etc/%s", currentUser.Username, name)
+}
+
+func (l *LXCEngine) setupUnprivileged() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Ensure parent directories of configDir have no execute permission
+	// This is a security requirement for unprivileged LXC containers
+	dirs := []string{
+		home,
+		filepath.Join(home, ".local"),
+		filepath.Join(home, ".local", "share"),
+		filepath.Join(home, ".local", "share", "lxc"),
+	}
+	for _, dir := range dirs {
+		os.Chmod(dir, 0755&^0111)
+	}
+
+	// Ensure user LXC config exists
+	configDir := filepath.Join(home, ".config", "lxc")
+	configFile := filepath.Join(configDir, "default.conf")
+
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			return fmt.Errorf("failed to create ~/.config/lxc: %w", err)
+		}
+
+		subuid, subuidCount, err := parseSubordinate("subuid")
+		if err != nil {
+			return fmt.Errorf("failed to parse /etc/subuid: %w", err)
+		}
+
+		subgid, subgidCount, err := parseSubordinate("subgid")
+		if err != nil {
+			return fmt.Errorf("failed to parse /etc/subgid: %w", err)
+		}
+
+		content := fmt.Sprintf(
+			"lxc.idmap = u 0 %d %d\n"+
+				"lxc.idmap = g 0 %d %d\n",
+			subuid, subuidCount,
+			subgid, subgidCount,
+		)
+
+		if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", configFile, err)
+		}
+	}
+
+	return nil
 }
