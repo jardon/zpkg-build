@@ -9,16 +9,16 @@ func (p *GoPlugin) Version() string { return p.source.Version }
 
 func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
-		"tar -xzf " + archivePath + " -C /usr/local/",
+		"tar -xzf " + archivePath + " -C $HOME/.local/",
 	}
 }
 
 func (p *GoPlugin) GetEnvVars() map[string]string {
 	return map[string]string{
-		"PATH":    "/usr/local/go/bin:$PATH",
+		"PATH":    "$HOME/.local/go/bin:$PATH",
 		"GOPATH":  "/zpkg-build-workspace/gopath",
 		"GOCACHE": "/zpkg-build-workspace/cache/go-build",
-		"GOROOT":  "/usr/local/go",
+		"GOROOT":  "$HOME/.local/go",
 	}
 }
 
