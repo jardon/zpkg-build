@@ -96,7 +96,7 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 			continue
 		}
 
-		args := strings.Fields(cmd)
+		args := []string{"sh", "-c", cmd}
 
 		var envList []string
 		for k, v := range config.EnvVars {
