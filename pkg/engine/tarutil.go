@@ -17,7 +17,7 @@ func tarArchive(srcPath string) (io.ReadCloser, error) {
 		tw := tar.NewWriter(pw)
 		defer tw.Close()
 
-		return filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
+		filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
