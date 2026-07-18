@@ -11,6 +11,7 @@ func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
 		"mkdir -p $HOME/.local",
 		"tar -xzf " + archivePath + " -C $HOME/.local/",
+		"mkdir -p /zpkg-build-workspace/gopath /zpkg-build-workspace/cache/go-build",
 	}
 }
 

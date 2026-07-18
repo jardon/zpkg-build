@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/jardon/zpkg-build/pkg/config"
 	"github.com/jardon/zpkg-build/pkg/engine"
@@ -90,6 +91,20 @@ func (b *Builder) setupWorkspace() error {
 			return fmt.Errorf("failed to create workspace directory %s: %w", dir, err)
 		}
 	}
+
+	uid := os.Getuid()
+	gid := os.Getgid()
+	filepath.Walk(b.workspace, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			if int(stat.Uid) != uid || int(stat.Gid) != gid {
+				os.Chown(path, uid, gid)
+			}
+		}
+		return nil
+	})
 
 	return nil
 }
