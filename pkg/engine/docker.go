@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -55,7 +56,7 @@ func (d *DockerEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 		return err
 	}
 
-	reader, err := d.client.ImagePull(ctx, baseImage, container.ImagePullOptions{})
+	reader, err := d.client.ImagePull(ctx, baseImage, image.PullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", baseImage, err)
 	}
@@ -148,7 +149,7 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 
 		stdcopy.StdCopy(os.Stdout, os.Stderr, resp.Reader)
 
-		inspect, err := d.client.ContainerExecInspect(ctx, execID.ID, true)
+		inspect, err := d.client.ContainerExecInspect(ctx, execID.ID)
 		if err != nil {
 			return fmt.Errorf("failed to inspect exec for '%s': %w", cmdStr, err)
 		}
@@ -205,16 +206,11 @@ func (d *DockerEngine) Destroy(ctx context.Context) error {
 		return nil
 	}
 
-	force := int(1)
 	d.client.ContainerRemove(ctx, d.containerID, container.RemoveOptions{
-		Force:   &force,
-		Volumes: boolPtr(true),
+		RemoveVolumes: true,
+		Force:         true,
 	})
 
 	d.containerID = ""
 	return nil
-}
-
-func boolPtr(b bool) *bool {
-	return &b
 }

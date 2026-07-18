@@ -1,3 +1,5 @@
+//go:build cgo
+
 package engine
 
 import (
@@ -44,8 +46,13 @@ func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mou
 	distro := l.distroFromImage(baseImage)
 	release := l.releaseFromImage(baseImage)
 
-	if err := l.lxcContainer.Download(lxc.DefaultNetwork, distro, release, "amd64", false, 0); err != nil {
-		return fmt.Errorf("failed to download LXC template: %w", err)
+	if err := l.lxcContainer.Create(lxc.TemplateOptions{
+		Template: "download",
+		Distro:   distro,
+		Release:  release,
+		Arch:     "amd64",
+	}); err != nil {
+		return fmt.Errorf("failed to create LXC template: %w", err)
 	}
 
 	for _, m := range mounts {
@@ -60,7 +67,7 @@ func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mou
 	l.lxcContainer.SetConfigItem("lxc.cap.drop", "ALL")
 	l.lxcContainer.SetConfigItem("lxc.security.nesting", "false")
 
-	if err := l.lxcContainer.SaveConfig(); err != nil {
+	if err := l.lxcContainer.SaveConfigFile(filepath.Join(containerPath, "config")); err != nil {
 		return fmt.Errorf("failed to save LXC config: %w", err)
 	}
 
@@ -84,7 +91,7 @@ func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
 		args := []string{"sh", "-c", cmdStr}
 
 		options := lxc.DefaultAttachOptions
-		options.ClearENV = false
+		options.ClearEnv = false
 
 		for k, v := range config.EnvVars {
 			options.Env = append(options.Env, fmt.Sprintf("%s=%s", k, v))
@@ -94,15 +101,12 @@ func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
 			options.Cwd = config.WorkingDir
 		}
 
-		exitCode, err := l.lxcContainer.AttachRunWait(
-			options,
-			args...,
-		)
+		ok, err := l.lxcContainer.RunCommand(args, options)
 		if err != nil {
 			return fmt.Errorf("command '%s' failed: %w", cmdStr, err)
 		}
-		if exitCode != 0 {
-			return fmt.Errorf("command '%s' exited with code %d", cmdStr, exitCode)
+		if !ok {
+			return fmt.Errorf("command '%s' exited with non-zero status", cmdStr)
 		}
 	}
 
@@ -114,7 +118,7 @@ func (l *LXCEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error
 		return fmt.Errorf("environment not initialized")
 	}
 
-	rootfsPath := l.lxcContainer.RootfsPath()
+	rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
 	targetPath := filepath.Join(rootfsPath, guestDest)
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -135,7 +139,7 @@ func (l *LXCEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) err
 		return fmt.Errorf("environment not initialized")
 	}
 
-	rootfsPath := l.lxcContainer.RootfsPath()
+	rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
 	sourcePath := filepath.Join(rootfsPath, guestSrc)
 
 	cmd := exec.Command("cp", "-a", sourcePath, hostDest)
@@ -154,7 +158,7 @@ func (l *LXCEngine) Destroy(ctx context.Context) error {
 
 	if l.lxcContainer.Running() {
 		if err := l.lxcContainer.Stop(); err != nil {
-			_ = l.lxcContainer.Shutdown()
+			_ = l.lxcContainer.Shutdown(0)
 		}
 	}
 
