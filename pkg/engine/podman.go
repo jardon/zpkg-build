@@ -19,6 +19,7 @@ import (
 type PodmanEngine struct {
 	socketConn  context.Context
 	containerID string
+	baseEnv     map[string]string
 }
 
 func NewPodmanEngine(socketPath string) *PodmanEngine {
@@ -91,6 +92,10 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 		return fmt.Errorf("environment not initialized")
 	}
 
+	if p.baseEnv == nil {
+		p.baseEnv = p.getContainerEnv(ctx)
+	}
+
 	for _, cmd := range config.Commands {
 		if strings.TrimSpace(cmd) == "" {
 			continue
@@ -98,8 +103,16 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 
 		args := []string{"sh", "-c", cmd}
 
-		var envList []string
+		merged := make(map[string]string)
+		for k, v := range p.baseEnv {
+			merged[k] = v
+		}
 		for k, v := range config.EnvVars {
+			merged[k] = v
+		}
+
+		var envList []string
+		for k, v := range merged {
 			envList = append(envList, fmt.Sprintf("%s=%s", k, v))
 		}
 
@@ -141,6 +154,20 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 	}
 
 	return nil
+}
+
+func (p *PodmanEngine) getContainerEnv(ctx context.Context) map[string]string {
+	env := make(map[string]string)
+	info, err := containers.Inspect(p.socketConn, p.containerID, nil)
+	if err != nil {
+		return env
+	}
+	for _, e := range info.Config.Env {
+		if idx := strings.IndexByte(e, '='); idx != -1 {
+			env[e[:idx]] = e[idx+1:]
+		}
+	}
+	return env
 }
 
 func (p *PodmanEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
