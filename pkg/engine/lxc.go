@@ -48,6 +48,8 @@ func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mou
 	}
 	l.lxcContainer = lxcContainer
 
+	l.lxcContainer.SetVerbosity(lxc.Verbose)
+
 	distro := l.distroFromImage(baseImage)
 	release := l.releaseFromImage(baseImage)
 
