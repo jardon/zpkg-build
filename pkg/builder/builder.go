@@ -86,12 +86,10 @@ func (b *Builder) setupWorkspace() error {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0777); err != nil {
+		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create workspace directory %s: %w", dir, err)
 		}
 	}
-	cmd := exec.Command("chmod", "-R", "0777", b.workspace)
-	cmd.Run()
 
 	return nil
 }
@@ -263,9 +261,6 @@ func (b *Builder) syncSrcToBuild() error {
 	if err != nil {
 		return fmt.Errorf("failed to sync src to build: %w\noutput: %s", err, string(output))
 	}
-
-	cmd = exec.Command("chmod", "-R", "0777", dst)
-	cmd.Run()
 
 	return nil
 }
@@ -570,7 +565,7 @@ func (b *Builder) Clean(step string) error {
 	for _, dir := range dirsToClean[s] {
 		fmt.Printf("    Cleaning: %s\n", dir)
 		_ = os.RemoveAll(dir)
-		_ = os.MkdirAll(dir, 0777)
+		_ = os.MkdirAll(dir, 0755)
 	}
 		}
 	}

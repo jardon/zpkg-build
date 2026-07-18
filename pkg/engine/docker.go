@@ -89,6 +89,7 @@ func (d *DockerEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 	containerCfg := &container.Config{
 		Image: baseImage,
 		Cmd:   []string{"sleep", "infinity"},
+		User:  fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 	}
 
 	hostCfg := &container.HostConfig{
