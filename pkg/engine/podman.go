@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -121,6 +122,10 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 		t := true
 		execOpts.AttachOutput = &t
 		execOpts.AttachError = &t
+		var stdout io.Writer = os.Stdout
+		var stderr io.Writer = os.Stderr
+		execOpts.OutputStream = &stdout
+		execOpts.ErrorStream = &stderr
 		err = containers.ExecStartAndAttach(p.socketConn, execID, execOpts)
 		if err != nil {
 			return fmt.Errorf("execution error on command '%s': %w", cmd, err)
