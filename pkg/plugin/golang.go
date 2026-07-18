@@ -9,6 +9,7 @@ func (p *GoPlugin) Version() string { return p.source.Version }
 
 func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
 	return []string{
+		"mkdir -p $HOME/.local",
 		"tar -xzf " + archivePath + " -C $HOME/.local/",
 	}
 }
