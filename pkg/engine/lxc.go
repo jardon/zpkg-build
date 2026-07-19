@@ -65,15 +65,16 @@ func (l *LXDEngine) CreateEnvironment(ctx context.Context, baseImage string, mou
 	}
 
 	l.containerName = fmt.Sprintf("zpkg-build-%d", os.Getpid())
-	alias := l.aliasFromImage(baseImage)
+
+	source, err := l.resolveImageSource(baseImage)
+	if err != nil {
+		return err
+	}
 
 	req := api.InstancesPost{
-		Name: l.containerName,
-		Source: api.InstanceSource{
-			Type:  "image",
-			Alias: alias,
-		},
-		Type: api.InstanceTypeContainer,
+		Name:   l.containerName,
+		Source: *source,
+		Type:   api.InstanceTypeContainer,
 	}
 
 	op, err := l.client.CreateInstance(req)
@@ -260,20 +261,41 @@ func (l *LXDEngine) Destroy(ctx context.Context) error {
 	return nil
 }
 
-func (l *LXDEngine) aliasFromImage(image string) string {
+func (l *LXDEngine) parseBaseImage(image string) (name, release string) {
 	parts := strings.SplitN(image, ":", 2)
-	name := parts[0]
+	name = parts[0]
 	if idx := strings.LastIndex(name, "/"); idx != -1 {
 		name = name[idx+1:]
 	}
 
-	release := "latest"
+	release = "latest"
 	if len(parts) > 1 {
 		release = parts[1]
 		if idx := strings.Index(release, "@"); idx != -1 {
 			release = release[:idx]
 		}
 	}
+	return name, release
+}
 
-	return name + "/" + release
+const simplestreamsURL = "https://cloud-images.ubuntu.com/releases/"
+
+func (l *LXDEngine) resolveImageSource(image string) (*api.InstanceSource, error) {
+	name, release := l.parseBaseImage(image)
+	localAlias := name + "/" + release
+
+	_, _, err := l.client.GetImageAlias(localAlias)
+	if err == nil {
+		return &api.InstanceSource{
+			Type:  "image",
+			Alias: localAlias,
+		}, nil
+	}
+
+	return &api.InstanceSource{
+		Type:     "image",
+		Alias:    release,
+		Server:   simplestreamsURL,
+		Protocol: "simplestreams",
+	}, nil
 }
