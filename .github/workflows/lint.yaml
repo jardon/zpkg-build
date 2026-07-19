@@ -23,7 +23,7 @@ jobs:
           sudo apt install -y podman libbtrfs-dev libgpgme-dev libgpgme-dev lxc-dev lxc
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25.0'
+          go-version: '1.25.6'
       - run: go vet ./...
 
   yamllint:
