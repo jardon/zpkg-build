@@ -1,112 +1,142 @@
-//go:build cgo
-
 package engine
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
-	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	lxc "github.com/lxc/go-lxc"
+	lxd "github.com/canonical/lxd/client"
+	"github.com/canonical/lxd/shared/api"
 )
 
-type LXCEngine struct {
+type LXDEngine struct {
+	client        lxd.InstanceServer
 	containerName string
-	configDir     string
-	lxcContainer  *lxc.Container
 }
 
-func NewLXCEngine(socketPath string) *LXCEngine {
-	configDir := os.Getenv("LXC_DIR")
-	if configDir == "" {
-		home, _ := os.UserHomeDir()
-		configDir = filepath.Join(home, ".local", "share", "lxc")
-	}
-	return &LXCEngine{
-		configDir: configDir,
-	}
+func NewLXDEngine(socketPath string) *LXDEngine {
+	return &LXDEngine{}
 }
 
-func (l *LXCEngine) Name() string {
+func (l *LXDEngine) Name() string {
 	return "lxc"
 }
 
-func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error {
-	if err := l.setupUnprivileged(); err != nil {
-		return fmt.Errorf("failed to setup unprivileged containers: %w", err)
+func (l *LXDEngine) connect() error {
+	if l.client != nil {
+		return nil
+	}
+
+	socketPath := findLXDSocket()
+	c, err := lxd.ConnectLXDUnix(socketPath, nil)
+	if err != nil {
+		return fmt.Errorf("failed to connect to LXD: %w", err)
+	}
+	l.client = c
+	return nil
+}
+
+func findLXDSocket() string {
+	candidates := []string{
+		os.Getenv("LXD_DIR") + "/unix.socket",
+		"/var/snap/lxd/common/lxd/unix.socket",
+		"/var/lib/lxd/unix.socket",
+		filepath.Join(os.Getenv("HOME"), "snap", "lxd", "common", "lxd", "unix.socket"),
+	}
+
+	for _, path := range candidates {
+		if path == "/unix.socket" {
+			continue
+		}
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return ""
+}
+
+func (l *LXDEngine) CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error {
+	if err := l.connect(); err != nil {
+		return err
 	}
 
 	l.containerName = fmt.Sprintf("zpkg-build-%d", os.Getpid())
-	containerPath := filepath.Join(l.configDir, l.containerName)
+	alias := l.aliasFromImage(baseImage)
 
-	if err := os.MkdirAll(containerPath, 0755); err != nil {
-		return fmt.Errorf("failed to create container directory: %w", err)
+	req := api.InstancesPost{
+		Name: l.containerName,
+		Source: api.InstanceSource{
+			Type:  "image",
+			Alias: alias,
+		},
+		Type: api.InstanceTypeContainer,
 	}
 
-	lxcContainer, err := lxc.NewContainer(l.containerName, l.configDir)
+	op, err := l.client.CreateInstance(req)
 	if err != nil {
-		return fmt.Errorf("failed to create LXC container handle: %w", err)
-	}
-	l.lxcContainer = lxcContainer
-
-	l.lxcContainer.SetVerbosity(lxc.Verbose)
-
-	distro := l.distroFromImage(baseImage)
-	release := l.releaseFromImage(baseImage)
-
-	if err := l.lxcContainer.Create(lxc.TemplateOptions{
-		Template: "download",
-		Distro:   distro,
-		Release:  release,
-		Arch:     "amd64",
-	}); err != nil {
-		return fmt.Errorf("failed to create LXC template: %w", err)
+		return fmt.Errorf("failed to create LXC instance: %w", err)
 	}
 
-	subuid, subuidCount, err := parseSubordinate("subuid")
-	if err != nil {
-		return fmt.Errorf("failed to parse /etc/subuid: %w", err)
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("failed to create LXC instance: %w", err)
 	}
 
-	subgid, subgidCount, err := parseSubordinate("subgid")
-	if err != nil {
-		return fmt.Errorf("failed to parse /etc/subgid: %w", err)
-	}
-
-	l.lxcContainer.SetConfigItem("lxc.idmap", fmt.Sprintf("u 0 %d %d", subuid, subuidCount))
-	l.lxcContainer.SetConfigItem("lxc.idmap", fmt.Sprintf("g 0 %d %d", subgid, subgidCount))
-
-	for _, m := range mounts {
-		options := "bind"
-		if m.ReadOnly {
-			options = "bind,ro"
+	if len(mounts) > 0 {
+		instance, etag, err := l.client.GetInstance(l.containerName)
+		if err != nil {
+			return fmt.Errorf("failed to get instance config: %w", err)
 		}
-		mountEntry := fmt.Sprintf("%s %s none %s 0 0", m.HostPath, m.ContainerPath, options)
-		l.lxcContainer.SetConfigItem("lxc.mount.entry", mountEntry)
+
+		if instance.Devices == nil {
+			instance.Devices = make(map[string]map[string]string)
+		}
+
+		for i, m := range mounts {
+			deviceName := fmt.Sprintf("zpkg-mount-%d", i)
+			instance.Devices[deviceName] = map[string]string{
+				"type":   "disk",
+				"path":   m.ContainerPath,
+				"source": m.HostPath,
+			}
+			if m.ReadOnly {
+				instance.Devices[deviceName]["readonly"] = "true"
+			}
+		}
+
+		op, err = l.client.UpdateInstance(l.containerName, api.InstancePut{
+			Config:  instance.Config,
+			Devices: instance.Devices,
+		}, etag)
+		if err != nil {
+			return fmt.Errorf("failed to configure mounts: %w", err)
+		}
+
+		if err := op.Wait(); err != nil {
+			return fmt.Errorf("failed to configure mounts: %w", err)
+		}
 	}
 
-	l.lxcContainer.SetConfigItem("lxc.cap.drop", "ALL")
-	l.lxcContainer.SetConfigItem("lxc.security.nesting", "false")
-
-	if err := l.lxcContainer.SaveConfigFile(filepath.Join(containerPath, "config")); err != nil {
-		return fmt.Errorf("failed to save LXC config: %w", err)
+	op, err = l.client.UpdateInstanceState(l.containerName, api.InstanceStatePut{
+		Action:  "start",
+		Timeout: -1,
+	}, "")
+	if err != nil {
+		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
-	if err := l.lxcContainer.Start(); err != nil {
-		return fmt.Errorf("failed to start LXC container: %w", err)
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("failed to start instance: %w", err)
 	}
 
 	return nil
 }
 
-func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
-	if l.lxcContainer == nil {
+func (l *LXDEngine) Run(ctx context.Context, config RunConfig) error {
+	if l.client == nil {
 		return fmt.Errorf("environment not initialized")
 	}
 
@@ -115,191 +145,135 @@ func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
 			continue
 		}
 
-		args := []string{"sh", "-c", cmdStr}
-
-		options := lxc.DefaultAttachOptions
-		options.ClearEnv = false
-
-		for k, v := range config.EnvVars {
-			options.Env = append(options.Env, fmt.Sprintf("%s=%s", k, v))
+		var fullCmd string
+		if len(config.EnvVars) > 0 {
+			var exports []string
+			for k, v := range config.EnvVars {
+				exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
+			}
+			fullCmd = strings.Join(exports, "; ")
 		}
-
 		if config.WorkingDir != "" {
-			options.Cwd = config.WorkingDir
+			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+		}
+		if fullCmd != "" {
+			fullCmd += "; "
+		}
+		fullCmd += cmdStr
+
+		var stdout, stderr bytes.Buffer
+		execReq := api.InstanceExecPost{
+			Command:  []string{"sh", "-c", fullCmd},
+			WaitForWS: true,
+		}
+		execArgs := lxd.InstanceExecArgs{
+			Stdout: &stdout,
+			Stderr: &stderr,
+			DataDone: make(chan bool),
 		}
 
-		ok, err := l.lxcContainer.RunCommand(args, options)
+		op, err := l.client.ExecInstance(l.containerName, execReq, &execArgs)
 		if err != nil {
+			return fmt.Errorf("failed to exec command '%s': %w", cmdStr, err)
+		}
+
+		<-execArgs.DataDone
+
+		if err := op.Wait(); err != nil {
 			return fmt.Errorf("command '%s' failed: %w", cmdStr, err)
 		}
-		if !ok {
-			return fmt.Errorf("command '%s' exited with non-zero status", cmdStr)
-		}
 	}
 
 	return nil
 }
 
-func (l *LXCEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
-	if l.lxcContainer == nil {
+func (l *LXDEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
+	if l.client == nil {
 		return fmt.Errorf("environment not initialized")
 	}
 
-	rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
-	targetPath := filepath.Join(rootfsPath, guestDest)
+	tarReader, err := tarArchive(hostSrc)
+	if err != nil {
+		return fmt.Errorf("failed to create tar archive: %w", err)
+	}
+	defer tarReader.Close()
 
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return fmt.Errorf("failed to create destination dir: %w", err)
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, tarReader); err != nil {
+		return fmt.Errorf("failed to read tar archive: %w", err)
 	}
 
-	cmd := exec.Command("cp", "-a", hostSrc, targetPath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to copy to LXC rootfs: %w\noutput: %s", err, string(output))
+	args := lxd.InstanceFileArgs{
+		Content:  bytes.NewReader(buf.Bytes()),
+		Type:     "file",
+		WriteMode: "overwrite",
+	}
+
+	if err := l.client.CreateInstanceFile(l.containerName, guestDest, args); err != nil {
+		return fmt.Errorf("failed to copy to LXC instance: %w", err)
 	}
 
 	return nil
 }
 
-func (l *LXCEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) error {
-	if l.lxcContainer == nil {
+func (l *LXDEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) error {
+	if l.client == nil {
 		return fmt.Errorf("environment not initialized")
 	}
 
-	rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
-	sourcePath := filepath.Join(rootfsPath, guestSrc)
-
-	cmd := exec.Command("cp", "-a", sourcePath, hostDest)
-	output, err := cmd.CombinedOutput()
+	content, _, err := l.client.GetInstanceFile(l.containerName, guestSrc)
 	if err != nil {
-		return fmt.Errorf("failed to copy from LXC rootfs: %w\noutput: %s", err, string(output))
+		return fmt.Errorf("failed to copy from LXC instance: %w", err)
+	}
+	defer content.Close()
+
+	if err := extractTar(content, hostDest); err != nil {
+		return fmt.Errorf("failed to extract tar: %w", err)
 	}
 
 	return nil
 }
 
-func (l *LXCEngine) Destroy(ctx context.Context) error {
-	if l.lxcContainer == nil {
+func (l *LXDEngine) Destroy(ctx context.Context) error {
+	if l.client == nil || l.containerName == "" {
 		return nil
 	}
 
-	if l.lxcContainer.Running() {
-		if err := l.lxcContainer.Stop(); err != nil {
-			_ = l.lxcContainer.Shutdown(0)
-		}
+	op, err := l.client.UpdateInstanceState(l.containerName, api.InstanceStatePut{
+		Action:  "stop",
+		Timeout: 30,
+	}, "")
+	if err == nil {
+		_ = op.Wait()
 	}
 
-	if err := l.lxcContainer.Destroy(); err != nil {
-		return fmt.Errorf("failed to destroy LXC container: %w", err)
+	op, err = l.client.DeleteInstance(l.containerName, true)
+	if err != nil {
+		return fmt.Errorf("failed to delete LXC instance: %w", err)
 	}
 
-	l.lxcContainer = nil
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("failed to delete LXC instance: %w", err)
+	}
+
 	l.containerName = ""
 	return nil
 }
 
-func (l *LXCEngine) distroFromImage(image string) string {
+func (l *LXDEngine) aliasFromImage(image string) string {
 	parts := strings.SplitN(image, ":", 2)
 	name := parts[0]
 	if idx := strings.LastIndex(name, "/"); idx != -1 {
 		name = name[idx+1:]
 	}
-	return name
-}
 
-func (l *LXCEngine) releaseFromImage(image string) string {
-	parts := strings.SplitN(image, ":", 2)
-	if len(parts) < 2 {
-		return "latest"
-	}
-	release := parts[1]
-	if idx := strings.Index(release, "@"); idx != -1 {
-		release = release[:idx]
-	}
-	return release
-}
-
-func parseSubordinate(name string) (int, int, error) {
-	file, err := os.Open("/etc/" + name)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer file.Close()
-
-	currentUser, err := user.Current()
-	if err != nil {
-		return 0, 0, err
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		parts := strings.SplitN(line, ":", 3)
-		if len(parts) < 3 {
-			continue
-		}
-
-		if parts[0] == currentUser.Username {
-			start, err := strconv.Atoi(parts[1])
-			if err != nil {
-				return 0, 0, fmt.Errorf("invalid subordinate start %q: %w", parts[1], err)
-			}
-			count, err := strconv.Atoi(parts[2])
-			if err != nil {
-				return 0, 0, fmt.Errorf("invalid subordinate count %q: %w", parts[2], err)
-			}
-			return start, count, nil
+	release := "latest"
+	if len(parts) > 1 {
+		release = parts[1]
+		if idx := strings.Index(release, "@"); idx != -1 {
+			release = release[:idx]
 		}
 	}
 
-	return 0, 0, fmt.Errorf("no entry for %s in /etc/%s", currentUser.Username, name)
-}
-
-func (l *LXCEngine) setupUnprivileged() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	// Ensure configDir exists with proper permissions
-	if err := os.MkdirAll(l.configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create LXC config directory: %w", err)
-	}
-
-	// Ensure user LXC config exists
-	configDir := filepath.Join(home, ".config", "lxc")
-	configFile := filepath.Join(configDir, "default.conf")
-
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0755); err != nil {
-			return fmt.Errorf("failed to create ~/.config/lxc: %w", err)
-		}
-
-		subuid, subuidCount, err := parseSubordinate("subuid")
-		if err != nil {
-			return fmt.Errorf("failed to parse /etc/subuid: %w", err)
-		}
-
-		subgid, subgidCount, err := parseSubordinate("subgid")
-		if err != nil {
-			return fmt.Errorf("failed to parse /etc/subgid: %w", err)
-		}
-
-		content := fmt.Sprintf(
-			"lxc.idmap = u 0 %d %d\n"+
-				"lxc.idmap = g 0 %d %d\n",
-			subuid, subuidCount,
-			subgid, subgidCount,
-		)
-
-		if err := os.WriteFile(configFile, []byte(content), 0644); err != nil {
-			return fmt.Errorf("failed to write %s: %w", configFile, err)
-		}
-	}
-
-	return nil
+	return name + "/" + release
 }

@@ -31,7 +31,7 @@ func New(name, socketPath string) (Engine, error) {
 	case "docker":
 		return NewDockerEngine(socketPath), nil
 	case "lxc":
-		return NewLXCEngine(socketPath), nil
+		return NewLXDEngine(socketPath), nil
 	case "chroot":
 		return NewChrootEngine(socketPath), nil
 	default:
