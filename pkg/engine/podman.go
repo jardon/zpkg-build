@@ -7,13 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containers/podman/v5/pkg/api/handlers"
-	"github.com/containers/podman/v5/pkg/bindings"
-	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/containers/podman/v5/pkg/bindings/images"
-	"github.com/containers/podman/v5/pkg/specgen"
-	dockerContainer "github.com/docker/docker/api/types/container"
-	spec "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"go.podman.io/podman/v6/pkg/api/handlers"
+	"go.podman.io/podman/v6/pkg/bindings"
+	"go.podman.io/podman/v6/pkg/bindings/containers"
+	"go.podman.io/podman/v6/pkg/bindings/images"
+	"go.podman.io/podman/v6/pkg/specgen"
 )
 
 type PodmanEngine struct {
@@ -64,7 +63,7 @@ func (p *PodmanEngine) CreateEnvironment(ctx context.Context, baseImage string, 
 		if m.SELinuxLabel {
 			mode += ",Z"
 		}
-		s.Mounts = append(s.Mounts, spec.Mount{
+		s.Mounts = append(s.Mounts, specs.Mount{
 			Type:        "bind",
 			Source:      m.HostPath,
 			Destination: m.ContainerPath,
@@ -121,27 +120,24 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 
 		args := []string{"sh", "-c", fullCmd}
 
-		createConfig := &handlers.ExecCreateConfig{
-			ExecOptions: dockerContainer.ExecOptions{
-				AttachStdout: true,
-				AttachStderr: true,
-				Cmd:          args,
-			},
-		}
+		createConfig := &handlers.ExecCreateConfig{}
+		createConfig.AttachStdout = true
+		createConfig.AttachStderr = true
+		createConfig.Cmd = args
 
 		execID, err := containers.ExecCreate(p.socketConn, p.containerID, createConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create exec session for '%s': %w", cmd, err)
 		}
 
-		execOpts := new(containers.ExecStartAndAttachOptions)
 		t := true
-		execOpts.AttachOutput = &t
-		execOpts.AttachError = &t
 		var stdout io.Writer = os.Stdout
 		var stderr io.Writer = os.Stderr
-		execOpts.OutputStream = &stdout
-		execOpts.ErrorStream = &stderr
+		execOpts := new(containers.ExecStartAndAttachOptions).
+			WithAttachOutput(t).
+			WithAttachError(t).
+			WithOutputStream(stdout).
+			WithErrorStream(stderr)
 		err = containers.ExecStartAndAttach(p.socketConn, execID, execOpts)
 		if err != nil {
 			return fmt.Errorf("execution error on command '%s': %w", cmd, err)
