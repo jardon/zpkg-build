@@ -15,7 +15,8 @@ type PackageCache struct {
 type Plugin interface {
 	Name() string
 	Version() string
-	GetInstallScripts(archivePath string) []string
+	GetExtractPath() string
+	GetPostExtractSteps() []string
 	GetEnvVars() map[string]string
 	GetCacheDirectories() []PackageCache
 	GetDefaultBuildSteps() []string

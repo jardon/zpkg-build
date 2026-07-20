@@ -7,10 +7,12 @@ type GoPlugin struct {
 func (p *GoPlugin) Name() string    { return "golang" }
 func (p *GoPlugin) Version() string { return p.source.Version }
 
-func (p *GoPlugin) GetInstallScripts(archivePath string) []string {
+func (p *GoPlugin) GetExtractPath() string {
+	return "$HOME/.local"
+}
+
+func (p *GoPlugin) GetPostExtractSteps() []string {
 	return []string{
-		"mkdir -p $HOME/.local",
-		"tar -xzf " + archivePath + " -C $HOME/.local/",
 		"mkdir -p /zpkg-build-workspace/gopath /zpkg-build-workspace/cache/go-build",
 	}
 }

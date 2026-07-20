@@ -255,6 +255,31 @@ func (c *ChrootEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 	return nil
 }
 
+func (c *ChrootEngine) CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error {
+	tmpDir, err := os.MkdirTemp("", "zpkg-chroot-tar-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if err := extractTar(tarReader, tmpDir); err != nil {
+		return fmt.Errorf("failed to extract tar stream: %w", err)
+	}
+
+	target := filepath.Join(c.rootfsPath, guestDest)
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return fmt.Errorf("failed to create destination dir: %w", err)
+	}
+
+	cmd := exec.Command("cp", "-a", tmpDir+"/.", target)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to copy extracted tar to chroot: %w\noutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
 func (c *ChrootEngine) Destroy(ctx context.Context) error {
 	if c.rootfsPath == "" {
 		return nil

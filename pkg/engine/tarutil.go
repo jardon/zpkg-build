@@ -20,7 +20,8 @@ const (
 	CompXz
 )
 
-func detectCompression(path string) CompressionType {
+// DetectCompression identifies the compression format of a file by its extension.
+func DetectCompression(path string) CompressionType {
 	switch {
 	case strings.HasSuffix(path, ".tar.gz") || strings.HasSuffix(path, ".tgz"):
 		return CompGzip
@@ -93,6 +94,18 @@ func tarArchive(srcPath string) (io.ReadCloser, error) {
 	return pr, nil
 }
 
+// DecompressArchive opens a compressed archive and returns a streaming reader
+// of the decompressed content. Supports gzip, xz, and uncompressed formats.
+func DecompressArchive(path string) (io.Reader, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open archive %s: %w", path, err)
+	}
+
+	comp := DetectCompression(path)
+	return decompressReader(f, comp)
+}
+
 func extractTar(reader io.Reader, destPath string) error {
 	tr := tar.NewReader(reader)
 
@@ -141,16 +154,9 @@ func extractTar(reader io.Reader, destPath string) error {
 }
 
 func ExtractArchive(path string, destPath string) error {
-	f, err := os.Open(path)
+	reader, err := DecompressArchive(path)
 	if err != nil {
-		return fmt.Errorf("failed to open archive %s: %w", path, err)
-	}
-	defer f.Close()
-
-	comp := detectCompression(path)
-	reader, err := decompressReader(f, comp)
-	if err != nil {
-		return fmt.Errorf("failed to decompress %s: %w", path, err)
+		return err
 	}
 
 	return extractTar(reader, destPath)
@@ -172,7 +178,7 @@ func isTarArchive(path string) bool {
 	}
 	defer f.Close()
 
-	comp := detectCompression(path)
+	comp := DetectCompression(path)
 	reader, err := decompressReader(f, comp)
 	if err != nil {
 		return false

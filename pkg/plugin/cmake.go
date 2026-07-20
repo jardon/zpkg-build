@@ -7,10 +7,12 @@ type CMakePlugin struct {
 func (p *CMakePlugin) Name() string    { return "cmake" }
 func (p *CMakePlugin) Version() string { return p.source.Version }
 
-func (p *CMakePlugin) GetInstallScripts(archivePath string) []string {
-	return []string{
-		"tar -xzf " + archivePath + " -C /usr/local/",
-	}
+func (p *CMakePlugin) GetExtractPath() string {
+	return "/usr/local"
+}
+
+func (p *CMakePlugin) GetPostExtractSteps() []string {
+	return nil
 }
 
 func (p *CMakePlugin) GetEnvVars() map[string]string {

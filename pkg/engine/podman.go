@@ -244,6 +244,21 @@ func (p *PodmanEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 	return nil
 }
 
+func (p *PodmanEngine) CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error {
+	if p.containerID == "" || p.socketConn == nil {
+		return fmt.Errorf("environment not initialized")
+	}
+
+	copyFunc, err := containers.CopyFromArchive(p.socketConn, p.containerID, guestDest, tarReader)
+	if err != nil {
+		return fmt.Errorf("failed to copy tar stream into podman environment: %w", err)
+	}
+	if err := copyFunc(); err != nil {
+		return fmt.Errorf("failed to apply tar stream: %w", err)
+	}
+	return nil
+}
+
 func (p *PodmanEngine) Destroy(ctx context.Context) error {
 	if p.containerID == "" || p.socketConn == nil {
 		return nil

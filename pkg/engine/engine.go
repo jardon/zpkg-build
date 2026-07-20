@@ -1,6 +1,9 @@
 package engine
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 type Mount struct {
 	HostPath      string
@@ -21,6 +24,7 @@ type Engine interface {
 	Run(ctx context.Context, config RunConfig) error
 	CopyTo(ctx context.Context, hostSrc, guestDest string) error
 	CopyFrom(ctx context.Context, guestSrc, hostDest string) error
+	CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error
 	Destroy(ctx context.Context) error
 }
 

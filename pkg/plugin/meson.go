@@ -7,10 +7,12 @@ type MesonPlugin struct {
 func (p *MesonPlugin) Name() string    { return "meson" }
 func (p *MesonPlugin) Version() string { return p.source.Version }
 
-func (p *MesonPlugin) GetInstallScripts(archivePath string) []string {
-	return []string{
-		"tar -xzf " + archivePath + " -C /usr/local/",
-	}
+func (p *MesonPlugin) GetExtractPath() string {
+	return "/usr/local"
+}
+
+func (p *MesonPlugin) GetPostExtractSteps() []string {
+	return nil
 }
 
 func (p *MesonPlugin) GetEnvVars() map[string]string {

@@ -5,6 +5,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -146,6 +147,37 @@ func (l *LXCEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) err
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to copy from LXC rootfs: %w\noutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func (l *LXCEngine) CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error {
+	if l.lxcContainer == nil {
+		return fmt.Errorf("environment not initialized")
+	}
+
+	tmpDir, err := os.MkdirTemp("", "zpkg-lxc-tar-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if err := extractTar(tarReader, tmpDir); err != nil {
+		return fmt.Errorf("failed to extract tar stream: %w", err)
+	}
+
+	rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
+	targetPath := filepath.Join(rootfsPath, guestDest)
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("failed to create destination dir: %w", err)
+	}
+
+	cmd := exec.Command("cp", "-a", tmpDir+"/.", targetPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to copy extracted tar to LXC rootfs: %w\noutput: %s", err, string(output))
 	}
 
 	return nil
