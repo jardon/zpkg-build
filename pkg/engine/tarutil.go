@@ -2,11 +2,49 @@ package engine
 
 import (
 	"archive/tar"
+	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ulikunitz/xz"
 )
+
+type CompressionType int
+
+const (
+	CompNone CompressionType = iota
+	CompGzip
+	CompXz
+)
+
+func detectCompression(path string) CompressionType {
+	switch {
+	case strings.HasSuffix(path, ".tar.gz") || strings.HasSuffix(path, ".tgz"):
+		return CompGzip
+	case strings.HasSuffix(path, ".tar.xz") || strings.HasSuffix(path, ".txz"):
+		return CompXz
+	case strings.HasSuffix(path, ".gz"):
+		return CompGzip
+	case strings.HasSuffix(path, ".xz"):
+		return CompXz
+	default:
+		return CompNone
+	}
+}
+
+func decompressReader(r io.Reader, comp CompressionType) (io.Reader, error) {
+	switch comp {
+	case CompGzip:
+		return gzip.NewReader(r)
+	case CompXz:
+		return xz.NewReader(r)
+	default:
+		return r, nil
+	}
+}
 
 func tarArchive(srcPath string) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
@@ -102,18 +140,50 @@ func extractTar(reader io.Reader, destPath string) error {
 	return nil
 }
 
+func ExtractArchive(path string, destPath string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("failed to open archive %s: %w", path, err)
+	}
+	defer f.Close()
+
+	comp := detectCompression(path)
+	reader, err := decompressReader(f, comp)
+	if err != nil {
+		return fmt.Errorf("failed to decompress %s: %w", path, err)
+	}
+
+	return extractTar(reader, destPath)
+}
+
 func isTarArchive(path string) bool {
+	ext := filepath.Ext(path)
+	switch ext {
+	case ".gz", ".tgz", ".xz", ".txz":
+		inner := strings.TrimSuffix(path, ext)
+		if extInner := filepath.Ext(inner); extInner == ".tar" {
+			return true
+		}
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return false
 	}
 	defer f.Close()
 
+	comp := detectCompression(path)
+	reader, err := decompressReader(f, comp)
+	if err != nil {
+		return false
+	}
+
 	buf := make([]byte, 262)
-	n, err := f.Read(buf)
+	n, err := io.ReadFull(reader, buf)
 	if n < 262 {
 		return false
 	}
+	_ = err
 
 	return strings.Contains(string(buf[:n]), "ustar")
 }
