@@ -114,6 +114,53 @@ func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
 	return nil
 }
 
+func (l *LXCEngine) RunOutput(ctx context.Context, config RunConfig) (string, error) {
+	if l.lxcContainer == nil {
+		return "", fmt.Errorf("environment not initialized")
+	}
+
+	var lastStdout string
+	for _, cmdStr := range config.Commands {
+		if strings.TrimSpace(cmdStr) == "" {
+			continue
+		}
+
+		outputFile := fmt.Sprintf("/tmp/.zpkg-run-output-%d", os.Getpid())
+		wrappedCmd := fmt.Sprintf("%s > %s 2>/dev/null", cmdStr, outputFile)
+		args := []string{"sh", "-c", wrappedCmd}
+
+		options := lxc.DefaultAttachOptions
+		options.ClearEnv = false
+
+		for k, v := range config.EnvVars {
+			options.Env = append(options.Env, fmt.Sprintf("%s=%s", k, v))
+		}
+
+		if config.WorkingDir != "" {
+			options.Cwd = config.WorkingDir
+		}
+
+		ok, err := l.lxcContainer.RunCommand(args, options)
+		if err != nil {
+			return "", fmt.Errorf("command '%s' failed: %w", cmdStr, err)
+		}
+		if !ok {
+			return "", fmt.Errorf("command '%s' exited with non-zero status", cmdStr)
+		}
+
+		rootfsPath := filepath.Join(l.configDir, l.containerName, "rootfs")
+		outputPath := filepath.Join(rootfsPath, outputFile)
+		data, readErr := os.ReadFile(outputPath)
+		os.Remove(outputPath)
+		if readErr != nil {
+			return "", fmt.Errorf("failed to read command output: %w", readErr)
+		}
+		lastStdout = string(data)
+	}
+
+	return lastStdout, nil
+}
+
 func (l *LXCEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
 	if l.lxcContainer == nil {
 		return fmt.Errorf("environment not initialized")

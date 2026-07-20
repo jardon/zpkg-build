@@ -230,6 +230,63 @@ func (c *ChrootEngine) Run(ctx context.Context, config RunConfig) error {
 	return nil
 }
 
+func (c *ChrootEngine) RunOutput(ctx context.Context, config RunConfig) (string, error) {
+	if c.rootfsPath == "" {
+		return "", fmt.Errorf("environment not initialized")
+	}
+
+	var lastStdout string
+	for _, cmdStr := range config.Commands {
+		if cmdStr == "" {
+			continue
+		}
+
+		env := []string{"HOME=/root", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+		for k, v := range config.EnvVars {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
+
+		var workDir string
+		if config.WorkingDir != "" {
+			workDir = config.WorkingDir
+		} else {
+			workDir = "/"
+		}
+
+		args := []string{
+			"unshare",
+			"--pid",
+			"--fork",
+			"--mount",
+			"--mount-proc=" + filepath.Join(c.rootfsPath, "proc"),
+			"chroot",
+			c.rootfsPath,
+			"sh", "-c",
+			fmt.Sprintf("cd %s && %s", workDir, cmdStr),
+		}
+
+		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+		cmd.Env = env
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{
+				Uid: 0,
+				Gid: 0,
+			},
+		}
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("command '%s' failed: %w\nstdout: %s\nstderr: %s", cmdStr, err, stdout.String(), stderr.String())
+		}
+		lastStdout = stdout.String()
+	}
+
+	return lastStdout, nil
+}
+
 func (c *ChrootEngine) CopyTo(ctx context.Context, hostSrc, guestDest string) error {
 	target := filepath.Join(c.rootfsPath, guestDest)
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {

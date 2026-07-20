@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -176,6 +177,72 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 	}
 
 	return nil
+}
+
+func (d *DockerEngine) RunOutput(ctx context.Context, config RunConfig) (string, error) {
+	if d.containerID == "" {
+		return "", fmt.Errorf("environment not initialized")
+	}
+
+	if d.baseEnv == nil {
+		d.baseEnv = d.getContainerEnv(ctx)
+	}
+
+	var lastStdout string
+	for _, cmdStr := range config.Commands {
+		if strings.TrimSpace(cmdStr) == "" {
+			continue
+		}
+
+		merged := make(map[string]string)
+		for k, v := range d.baseEnv {
+			merged[k] = v
+		}
+		for k, v := range config.EnvVars {
+			merged[k] = v
+		}
+
+		var exports []string
+		for k, v := range merged {
+			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
+		}
+		fullCmd := strings.Join(exports, "; ")
+		if config.WorkingDir != "" {
+			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+		}
+		fullCmd += "; " + cmdStr
+
+		execCfg := container.ExecOptions{
+			Cmd:          []string{"sh", "-c", fullCmd},
+			AttachStdout: true,
+			AttachStderr: true,
+		}
+
+		execID, err := d.client.ContainerExecCreate(ctx, d.containerID, execCfg)
+		if err != nil {
+			return "", fmt.Errorf("failed to create exec for '%s': %w", cmdStr, err)
+		}
+
+		resp, err := d.client.ContainerExecAttach(ctx, execID.ID, container.ExecStartOptions{})
+		if err != nil {
+			return "", fmt.Errorf("failed to attach exec for '%s': %w", cmdStr, err)
+		}
+		defer resp.Close()
+
+		var stdoutBuf, stderrBuf bytes.Buffer
+		stdcopy.StdCopy(&stdoutBuf, &stderrBuf, resp.Reader)
+
+		inspect, err := d.client.ContainerExecInspect(ctx, execID.ID)
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect exec for '%s': %w", cmdStr, err)
+		}
+		if inspect.ExitCode != 0 {
+			return "", fmt.Errorf("command '%s' exited with code %d", cmdStr, inspect.ExitCode)
+		}
+		lastStdout = stdoutBuf.String()
+	}
+
+	return lastStdout, nil
 }
 
 func (d *DockerEngine) getContainerEnv(ctx context.Context) map[string]string {
