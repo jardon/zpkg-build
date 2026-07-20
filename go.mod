@@ -7,6 +7,7 @@ require (
 	github.com/lxc/go-lxc v0.0.0-20260316180011-3af4ce000ed7
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/spf13/cobra v1.10.2
+	github.com/ulikunitz/xz v0.5.15
 	go.podman.io/podman/v6 v6.0.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -110,7 +111,6 @@ require (
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/sylabs/sif/v2 v2.24.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.12.3 // indirect
 	github.com/vbauerster/mpb/v8 v8.12.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
