@@ -22,6 +22,7 @@ type Engine interface {
 	Name() string
 	CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error
 	Run(ctx context.Context, config RunConfig) error
+	RunOutput(ctx context.Context, config RunConfig) (string, error)
 	CopyTo(ctx context.Context, hostSrc, guestDest string) error
 	CopyFrom(ctx context.Context, guestSrc, hostDest string) error
 	CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error

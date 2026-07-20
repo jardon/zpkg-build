@@ -329,6 +329,17 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	defer eng.Destroy(ctx)
 
 	if pluginArchivePath != "" && pluginExtractPath != "" {
+		if strings.Contains(pluginExtractPath, "$HOME") {
+			homeDir, err := eng.RunOutput(ctx, engine.RunConfig{
+				Commands: []string{"echo $HOME"},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to resolve HOME directory: %w", err)
+			}
+			homeDir = strings.TrimSpace(homeDir)
+			pluginExtractPath = strings.Replace(pluginExtractPath, "$HOME", homeDir, 1)
+		}
+
 		fmt.Printf("    Creating plugin directory: %s\n", pluginExtractPath)
 		if err := eng.Run(ctx, engine.RunConfig{
 			Commands: []string{"mkdir -p " + pluginExtractPath},

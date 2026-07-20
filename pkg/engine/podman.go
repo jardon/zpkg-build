@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -153,6 +154,77 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 	}
 
 	return nil
+}
+
+func (p *PodmanEngine) RunOutput(ctx context.Context, config RunConfig) (string, error) {
+	if p.containerID == "" || p.socketConn == nil {
+		return "", fmt.Errorf("environment not initialized")
+	}
+
+	if p.baseEnv == nil {
+		p.baseEnv = p.getContainerEnv(ctx)
+	}
+
+	var lastStdout string
+	for _, cmd := range config.Commands {
+		if strings.TrimSpace(cmd) == "" {
+			continue
+		}
+
+		merged := make(map[string]string)
+		for k, v := range p.baseEnv {
+			merged[k] = v
+		}
+		for k, v := range config.EnvVars {
+			merged[k] = resolveEnvVarRefs(v, p.baseEnv)
+		}
+
+		var exports []string
+		for k, v := range merged {
+			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
+		}
+		fullCmd := strings.Join(exports, "; ")
+		if config.WorkingDir != "" {
+			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+		}
+		fullCmd += "; " + cmd
+
+		args := []string{"sh", "-c", fullCmd}
+
+		createConfig := &handlers.ExecCreateConfig{}
+		createConfig.AttachStdout = true
+		createConfig.AttachStderr = true
+		createConfig.Cmd = args
+
+		execID, err := containers.ExecCreate(p.socketConn, p.containerID, createConfig)
+		if err != nil {
+			return "", fmt.Errorf("failed to create exec session for '%s': %w", cmd, err)
+		}
+
+		t := true
+		var stdoutBuf bytes.Buffer
+		var stderrBuf bytes.Buffer
+		execOpts := new(containers.ExecStartAndAttachOptions).
+			WithAttachOutput(t).
+			WithAttachError(t).
+			WithOutputStream(&stdoutBuf).
+			WithErrorStream(&stderrBuf)
+		err = containers.ExecStartAndAttach(p.socketConn, execID, execOpts)
+		if err != nil {
+			return "", fmt.Errorf("execution error on command '%s': %w", cmd, err)
+		}
+
+		inspect, err := containers.ExecInspect(p.socketConn, execID, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect session status: %w", err)
+		}
+		if inspect.ExitCode != 0 {
+			return "", fmt.Errorf("command '%s' exited with code %d", cmd, inspect.ExitCode)
+		}
+		lastStdout = stdoutBuf.String()
+	}
+
+	return lastStdout, nil
 }
 
 func (p *PodmanEngine) getContainerEnv(ctx context.Context) map[string]string {
