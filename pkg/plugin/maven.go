@@ -7,10 +7,12 @@ type MavenPlugin struct {
 func (p *MavenPlugin) Name() string    { return "maven" }
 func (p *MavenPlugin) Version() string { return p.source.Version }
 
-func (p *MavenPlugin) GetInstallScripts(archivePath string) []string {
-	return []string{
-		"tar -xzf " + archivePath + " -C /usr/share/",
-	}
+func (p *MavenPlugin) GetExtractPath() string {
+	return "/usr/share"
+}
+
+func (p *MavenPlugin) GetPostExtractSteps() []string {
+	return nil
 }
 
 func (p *MavenPlugin) GetEnvVars() map[string]string {

@@ -7,10 +7,12 @@ type PoetryPlugin struct {
 func (p *PoetryPlugin) Name() string    { return "poetry" }
 func (p *PoetryPlugin) Version() string { return p.source.Version }
 
-func (p *PoetryPlugin) GetInstallScripts(archivePath string) []string {
-	return []string{
-		"tar -xzf " + archivePath + " -C /usr/local/",
-	}
+func (p *PoetryPlugin) GetExtractPath() string {
+	return "/usr/local"
+}
+
+func (p *PoetryPlugin) GetPostExtractSteps() []string {
+	return nil
 }
 
 func (p *PoetryPlugin) GetEnvVars() map[string]string {

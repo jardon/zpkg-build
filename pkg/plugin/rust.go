@@ -7,10 +7,12 @@ type RustPlugin struct {
 func (p *RustPlugin) Name() string    { return "rust" }
 func (p *RustPlugin) Version() string { return p.source.Version }
 
-func (p *RustPlugin) GetInstallScripts(archivePath string) []string {
-	return []string{
-		"tar -xzf " + archivePath + " -C /usr/local/",
-	}
+func (p *RustPlugin) GetExtractPath() string {
+	return "/usr/local"
+}
+
+func (p *RustPlugin) GetPostExtractSteps() []string {
+	return nil
 }
 
 func (p *RustPlugin) GetEnvVars() map[string]string {

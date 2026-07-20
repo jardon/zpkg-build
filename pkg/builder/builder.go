@@ -311,23 +311,16 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 		{HostPath: b.workspace, ContainerPath: "/zpkg-build-workspace"},
 	}
 
-	var guestArchivePath string
+	var pluginArchivePath string
+	var pluginExtractPath string
 	if b.activePlugin.Name() != "none" && b.activePlugin.Name() != "" {
 		pluginCacheDir := filepath.Join(b.cacheDir, "cache")
 		hostArchivePath, err := plugin.ResolveAndStage(b.manifest.Plugin, pluginCacheDir)
 		if err != nil {
 			return fmt.Errorf("failed to resolve plugin source: %w", err)
 		}
-
-		archiveDir := filepath.Dir(hostArchivePath)
-		archiveName := filepath.Base(hostArchivePath)
-		guestArchivePath = "/opt/plugin/" + archiveName
-
-		mounts = append(mounts, engine.Mount{
-			HostPath:      archiveDir,
-			ContainerPath: "/opt/plugin",
-			ReadOnly:      true,
-		})
+		pluginArchivePath = hostArchivePath
+		pluginExtractPath = b.activePlugin.GetExtractPath()
 	}
 
 	if err := eng.CreateEnvironment(ctx, b.manifest.Base, mounts); err != nil {
@@ -335,13 +328,31 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	}
 	defer eng.Destroy(ctx)
 
-	installScripts := b.activePlugin.GetInstallScripts(guestArchivePath)
-	for _, script := range installScripts {
-		fmt.Printf("    Installing plugin: %s\n", script)
+	if pluginArchivePath != "" && pluginExtractPath != "" {
+		fmt.Printf("    Creating plugin directory: %s\n", pluginExtractPath)
 		if err := eng.Run(ctx, engine.RunConfig{
-			Commands: []string{script},
+			Commands: []string{"mkdir -p " + pluginExtractPath},
 		}); err != nil {
-			return fmt.Errorf("plugin install failed: %w", err)
+			return fmt.Errorf("failed to create plugin extract directory: %w", err)
+		}
+
+		tarReader, err := engine.DecompressArchive(pluginArchivePath)
+		if err != nil {
+			return fmt.Errorf("failed to decompress plugin archive: %w", err)
+		}
+
+		fmt.Printf("    Installing plugin to %s\n", pluginExtractPath)
+		if err := eng.CopyTarStream(ctx, tarReader, pluginExtractPath); err != nil {
+			return fmt.Errorf("failed to stream plugin into environment: %w", err)
+		}
+	}
+
+	for _, step := range b.activePlugin.GetPostExtractSteps() {
+		fmt.Printf("    Running post-extract: %s\n", step)
+		if err := eng.Run(ctx, engine.RunConfig{
+			Commands: []string{step},
+		}); err != nil {
+			return fmt.Errorf("post-extract step failed: %w", err)
 		}
 	}
 

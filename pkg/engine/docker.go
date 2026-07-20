@@ -232,6 +232,18 @@ func (d *DockerEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 	return nil
 }
 
+func (d *DockerEngine) CopyTarStream(ctx context.Context, tarReader io.Reader, guestDest string) error {
+	if d.containerID == "" {
+		return fmt.Errorf("environment not initialized")
+	}
+
+	if err := d.client.CopyToContainer(ctx, d.containerID, guestDest, tarReader, container.CopyToContainerOptions{}); err != nil {
+		return fmt.Errorf("failed to copy tar stream to container: %w", err)
+	}
+
+	return nil
+}
+
 func (d *DockerEngine) Destroy(ctx context.Context) error {
 	if d.containerID == "" {
 		return nil
