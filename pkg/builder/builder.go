@@ -446,6 +446,9 @@ func (b *Builder) assemblePackage() error {
 	destPath := b.destDir()
 	pkgPath := b.pkgDir()
 
+	includes := normalizePatterns(b.manifest.Package["include"])
+	excludes := normalizePatterns(b.manifest.Package["exclude"])
+
 	return filepath.Walk(destPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -456,6 +459,24 @@ func (b *Builder) assemblePackage() error {
 			return err
 		}
 
+		if relPath == "." {
+			return nil
+		}
+
+		if matchesAnyExclude(relPath, excludes) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if len(includes) > 0 && !matchesAnyInclude(relPath, includes) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		dest := filepath.Join(pkgPath, relPath)
 
 		if info.IsDir() {
@@ -464,6 +485,67 @@ func (b *Builder) assemblePackage() error {
 
 		return copyFile(path, dest)
 	})
+}
+
+func normalizePatterns(patterns []string) []string {
+	var normalized []string
+	for _, p := range patterns {
+		p = strings.TrimPrefix(p, "/")
+		normalized = append(normalized, p)
+	}
+	return normalized
+}
+
+func matchesAnyInclude(relPath string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if matchPath(relPath, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesAnyExclude(relPath string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if matchPath(relPath, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchPath(relPath, pattern string) bool {
+	patternParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(relPath, "/")
+
+	return matchParts(pathParts, patternParts)
+}
+
+func matchParts(pathParts, patternParts []string) bool {
+	if len(patternParts) == 0 {
+		return len(pathParts) == 0
+	}
+
+	if patternParts[0] == "**" {
+		rest := patternParts[1:]
+		for i := 0; i <= len(pathParts); i++ {
+			if matchParts(pathParts[i:], rest) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if len(pathParts) == 0 {
+		return false
+	}
+
+	matched, err := filepath.Match(patternParts[0], pathParts[0])
+	if err != nil || !matched {
+		return false
+	}
+
+	return matchParts(pathParts[1:], patternParts[1:])
 }
 
 func (b *Builder) Export(ctx context.Context) error {
