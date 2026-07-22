@@ -9,6 +9,7 @@ import (
 )
 
 var manifestFile string
+var outputDir string
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -79,7 +80,7 @@ func packageCmd() *cobra.Command {
 }
 
 func exportCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Archive build output and export to host",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -87,9 +88,12 @@ func exportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			b.SetOutputDir(outputDir)
 			return b.Export(cmd.Context())
 		},
 	}
+	cmd.Flags().StringVar(&outputDir, "output-dir", ".", "Output directory for exported archives")
+	return cmd
 }
 
 func cleanCmd() *cobra.Command {
