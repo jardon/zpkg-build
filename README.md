@@ -5,7 +5,7 @@ A CLI tool that compiles and packages software inside isolated sandbox environme
 ## Build
 
 ```bash
-go build -tags "containers_image_openpgp" -o zpkg-build ./cmd/zpkg-build/
+go build -o zpkg-build ./cmd/zpkg-build/
 ```
 
 ## Usage
