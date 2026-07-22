@@ -69,7 +69,7 @@ export:
 
 | Engine | Backend | Notes |
 |--------|---------|-------|
-| `podman` | podman v5 (Go bindings) | Default, rootless |
+| `podman` | podman v6 (Go bindings) | Default, rootless |
 | `docker` | docker v28 (Go bindings) | Requires daemon |
 | `lxc` | go-lxc (CGO) | Requires lxc-dev |
 | `chroot` | `unshare` namespaces | No container runtime needed |
