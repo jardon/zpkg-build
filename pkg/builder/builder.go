@@ -234,12 +234,11 @@ func (b *Builder) copyLocalSource(ctx context.Context) error {
 }
 
 func (b *Builder) Build(ctx context.Context) error {
-	fmt.Println("==> Stage: build")
-
 	if err := b.Pull(ctx); err != nil {
 		return err
 	}
 
+	fmt.Println("==> Stage: build")
 	tracker := b.stateTracker()
 	if tracker.IsStepCached(config.StepBuild, b.sourceHash, b.recipeHash) {
 		fmt.Println("    build stage cached, skipping")
@@ -408,12 +407,11 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 }
 
 func (b *Builder) Package(ctx context.Context) error {
-	fmt.Println("==> Stage: package")
-
 	if err := b.Build(ctx); err != nil {
 		return err
 	}
 
+	fmt.Println("==> Stage: package")
 	tracker := b.stateTracker()
 	if tracker.IsStepCached(config.StepPackage, b.sourceHash, b.recipeHash) {
 		fmt.Println("    package stage cached, skipping")
@@ -554,12 +552,11 @@ func matchParts(pathParts, patternParts []string) bool {
 }
 
 func (b *Builder) Export(ctx context.Context) error {
-	fmt.Println("==> Stage: export")
-
 	if err := b.Package(ctx); err != nil {
 		return err
 	}
 
+	fmt.Println("==> Stage: export")
 	tracker := b.stateTracker()
 	if tracker.IsStepCached(config.StepExport, b.sourceHash, b.recipeHash) {
 		fmt.Println("    export stage cached, skipping")
