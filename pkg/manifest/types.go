@@ -32,6 +32,7 @@ type BuildBlock struct {
 type RecipeManifest struct {
 	Name         string              `yaml:"name"`
 	Version      string              `yaml:"version"`
+	Arch         string              `yaml:"arch"`
 	License      string              `yaml:"license,omitempty"`
 	Source       SourceBlock         `yaml:"source"`
 	Engine       string              `yaml:"engine"`

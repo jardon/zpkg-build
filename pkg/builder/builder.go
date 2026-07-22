@@ -582,7 +582,7 @@ func (b *Builder) Export(ctx context.Context) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	archiveName := fmt.Sprintf("%s-%s.%s", b.manifest.Name, b.manifest.Version, format)
+	archiveName := fmt.Sprintf("%s-%s-%s.%s", b.manifest.Name, b.manifest.Version, b.manifest.Arch, format)
 	archivePath := filepath.Join(outputDir, archiveName)
 
 	fmt.Printf("    Creating %s archive...\n", format)
