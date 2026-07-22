@@ -572,7 +572,10 @@ func (b *Builder) Export(ctx context.Context) error {
 	}
 
 	if !filepath.IsAbs(outputDir) {
-		outputDir = filepath.Join(filepath.Dir(b.manifestPath), outputDir)
+		outputDir, err = filepath.Abs(outputDir)
+		if err != nil {
+			return fmt.Errorf("failed to resolve output directory: %w", err)
+		}
 	}
 
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
