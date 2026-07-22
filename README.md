@@ -24,6 +24,7 @@ zpkg-build -f package.yaml status    # show cache and step state
 ```yaml
 name: "hello-world"
 version: "1.0.0"
+arch: "amd64"
 license: "MIT"
 
 source:
