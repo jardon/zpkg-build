@@ -63,7 +63,6 @@ package:
 
 export:
   format: "tar.gz"
-  output: "./dist/"
 ```
 
 ### Engines

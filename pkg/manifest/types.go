@@ -47,5 +47,4 @@ type RecipeManifest struct {
 
 type ExportBlock struct {
 	Format string `yaml:"format"`
-	Output string `yaml:"output"`
 }

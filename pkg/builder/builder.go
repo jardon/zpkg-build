@@ -29,6 +29,7 @@ type Builder struct {
 	activePlugin plugin.Plugin
 	engine       engine.Engine
 	workspace    string
+	outputDir    string
 }
 
 func New(manifestPath string) (*Builder, error) {
@@ -52,6 +53,10 @@ func New(manifestPath string) (*Builder, error) {
 	}
 
 	return b, nil
+}
+
+func (b *Builder) SetOutputDir(dir string) {
+	b.outputDir = dir
 }
 
 func (b *Builder) loadManifest() error {
@@ -566,16 +571,14 @@ func (b *Builder) Export(ctx context.Context) error {
 		format = "tar.gz"
 	}
 
-	outputDir := b.manifest.Export.Output
+	outputDir := b.outputDir
 	if outputDir == "" {
-		outputDir = "./dist/"
+		outputDir = "."
 	}
 
-	if !filepath.IsAbs(outputDir) {
-		outputDir, err = filepath.Abs(outputDir)
-		if err != nil {
-			return fmt.Errorf("failed to resolve output directory: %w", err)
-		}
+	outputDir, err := filepath.Abs(outputDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve output directory: %w", err)
 	}
 
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
