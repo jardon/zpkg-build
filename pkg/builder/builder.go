@@ -30,6 +30,7 @@ type Builder struct {
 	engine       engine.Engine
 	workspace    string
 	outputDir    string
+	noArchive    bool
 }
 
 func New(manifestPath string) (*Builder, error) {
@@ -57,6 +58,10 @@ func New(manifestPath string) (*Builder, error) {
 
 func (b *Builder) SetOutputDir(dir string) {
 	b.outputDir = dir
+}
+
+func (b *Builder) SetNoArchive(noArchive bool) {
+	b.noArchive = noArchive
 }
 
 func (b *Builder) loadManifest() error {
@@ -423,18 +428,20 @@ func (b *Builder) Package(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Println("    Generating metadata...")
-	if err := packager.GenerateMetadata(
-		b.manifest.Name,
-		b.manifest.Version,
-		b.pkgDir(),
-		b.recipeHash,
-		b.rawRecipe,
-		b.manifest.Plugin,
-		b.manifest.BuildDeps,
-		b.manifest.RuntimeDeps,
-	); err != nil {
-		return err
+	if !b.noArchive {
+		fmt.Println("    Generating metadata...")
+		if err := packager.GenerateMetadata(
+			b.manifest.Name,
+			b.manifest.Version,
+			b.pkgDir(),
+			b.recipeHash,
+			b.rawRecipe,
+			b.manifest.Plugin,
+			b.manifest.BuildDeps,
+			b.manifest.RuntimeDeps,
+		); err != nil {
+			return err
+		}
 	}
 
 	if err := tracker.MarkStepComplete(config.StepPackage, b.sourceHash, b.recipeHash); err != nil {
@@ -563,11 +570,6 @@ func (b *Builder) Export(ctx context.Context) error {
 		return nil
 	}
 
-	format := b.manifest.Export.Format
-	if format == "" {
-		format = "tar.gz"
-	}
-
 	outputDir := b.outputDir
 	if outputDir == "" {
 		outputDir = "."
@@ -580,6 +582,26 @@ func (b *Builder) Export(ctx context.Context) error {
 
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	if b.noArchive {
+		fmt.Println("    Copying package contents to output directory...")
+		if err := b.copyPackageToOutput(outputDir); err != nil {
+			return err
+		}
+
+		if err := tracker.MarkStepComplete(config.StepExport, b.sourceHash, b.recipeHash); err != nil {
+			return err
+		}
+
+		fmt.Printf("    Exported to: %s\n", outputDir)
+		fmt.Println("    export stage complete")
+		return nil
+	}
+
+	format := b.manifest.Export.Format
+	if format == "" {
+		format = "tar.gz"
 	}
 
 	archiveName := fmt.Sprintf("%s-%s-%s.%s", b.manifest.Name, b.manifest.Version, b.manifest.Arch, format)
@@ -628,6 +650,32 @@ func (b *Builder) createZip(archivePath string) error {
 		return fmt.Errorf("zip failed: %w\noutput: %s", err, string(output))
 	}
 	return nil
+}
+
+func (b *Builder) copyPackageToOutput(outputDir string) error {
+	pkgPath := b.pkgDir()
+	return filepath.Walk(pkgPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(pkgPath, path)
+		if err != nil {
+			return err
+		}
+
+		if relPath == "." {
+			return nil
+		}
+
+		dest := filepath.Join(outputDir, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(dest, info.Mode())
+		}
+
+		return copyFile(path, dest)
+	})
 }
 
 func (b *Builder) Clean(step string) error {
