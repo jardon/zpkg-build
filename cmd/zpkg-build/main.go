@@ -10,6 +10,7 @@ import (
 
 var manifestFile string
 var outputDir string
+var noArchive bool
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -84,15 +85,20 @@ func exportCmd() *cobra.Command {
 		Use:   "export",
 		Short: "Archive build output and export to host",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if noArchive && outputDir == "." {
+				return fmt.Errorf("--no-archive requires --output-dir to be set")
+			}
 			b, err := newBuilder()
 			if err != nil {
 				return err
 			}
 			b.SetOutputDir(outputDir)
+			b.SetNoArchive(noArchive)
 			return b.Export(cmd.Context())
 		},
 	}
 	cmd.Flags().StringVar(&outputDir, "output-dir", ".", "Output directory for exported archives")
+	cmd.Flags().BoolVar(&noArchive, "no-archive", false, "Skip archiving and place files directly in output directory")
 	return cmd
 }
 
