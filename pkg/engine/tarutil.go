@@ -106,7 +106,18 @@ func DecompressArchive(path string) (io.Reader, error) {
 	return decompressReader(f, comp)
 }
 
-func extractTar(reader io.Reader, destPath string) error {
+func stripPathComponents(name string, strip int) string {
+	if strip == 0 {
+		return name
+	}
+	parts := strings.Split(name, "/")
+	if len(parts) <= strip {
+		return ""
+	}
+	return filepath.Join(parts[strip:]...)
+}
+
+func extractTar(reader io.Reader, destPath string, strip int) error {
 	tr := tar.NewReader(reader)
 
 	for {
@@ -118,7 +129,12 @@ func extractTar(reader io.Reader, destPath string) error {
 			return err
 		}
 
-		target := filepath.Join(destPath, header.Name)
+		name := stripPathComponents(header.Name, strip)
+		if name == "" {
+			continue
+		}
+
+		target := filepath.Join(destPath, name)
 
 		switch header.Typeflag {
 		case tar.TypeDir:
@@ -154,12 +170,16 @@ func extractTar(reader io.Reader, destPath string) error {
 }
 
 func ExtractArchive(path string, destPath string) error {
+	return ExtractArchiveStrip(path, destPath, 0)
+}
+
+func ExtractArchiveStrip(path string, destPath string, strip int) error {
 	reader, err := DecompressArchive(path)
 	if err != nil {
 		return err
 	}
 
-	return extractTar(reader, destPath)
+	return extractTar(reader, destPath, strip)
 }
 
 func isTarArchive(path string) bool {

@@ -20,6 +20,8 @@ type PatchSource struct {
 type SourceBlock struct {
 	Path    string        `yaml:"path,omitempty"`
 	Git     string        `yaml:"git,omitempty"`
+	URL     string        `yaml:"url,omitempty"`
+	SHA256  string        `yaml:"sha256,omitempty"`
 	Ref     string        `yaml:"ref,omitempty"`
 	Patches []PatchSource `yaml:"patches,omitempty"`
 }

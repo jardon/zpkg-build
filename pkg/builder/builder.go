@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,7 +123,7 @@ func (b *Builder) setupWorkspace() error {
 func (b *Builder) computeSourceHash() (string, error) {
 	hash := sha256.New()
 
-	sourceData := fmt.Sprintf("%s:%s:%s", b.manifest.Source.Git, b.manifest.Source.Ref, b.manifest.Source.Path)
+	sourceData := fmt.Sprintf("%s:%s:%s:%s:%s", b.manifest.Source.Git, b.manifest.Source.Ref, b.manifest.Source.Path, b.manifest.Source.URL, b.manifest.Source.SHA256)
 	hash.Write([]byte(sourceData))
 
 	for _, patch := range b.manifest.Source.Patches {
@@ -180,6 +181,11 @@ func (b *Builder) Pull(ctx context.Context) error {
 		if err := b.cloneGitSource(ctx); err != nil {
 			return err
 		}
+	} else if b.manifest.Source.URL != "" {
+		fmt.Println("    Downloading source tarball...")
+		if err := b.downloadTarballSource(); err != nil {
+			return err
+		}
 	} else if b.manifest.Source.Path != "" {
 		fmt.Println("    Copying local source...")
 		if err := b.copyLocalSource(ctx); err != nil {
@@ -235,6 +241,72 @@ func (b *Builder) copyLocalSource(ctx context.Context) error {
 		return fmt.Errorf("failed to copy local source: %w\noutput: %s", err, string(output))
 	}
 
+	return nil
+}
+
+func (b *Builder) downloadTarballSource() error {
+	if b.manifest.Source.SHA256 == "" || len(b.manifest.Source.SHA256) != 64 {
+		return fmt.Errorf("source url requires a valid 64-character SHA-256 hash")
+	}
+
+	cacheDir := filepath.Join(b.cacheDir, "cache", "tarballs")
+	ext := filepath.Ext(b.manifest.Source.URL)
+	cachedPath := filepath.Join(cacheDir, b.manifest.Source.SHA256+ext)
+
+	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(cacheDir, 0755); err != nil {
+			return err
+		}
+
+		fmt.Printf("    Downloading %s...\n", b.manifest.Source.URL)
+		resp, err := http.Get(b.manifest.Source.URL)
+		if err != nil {
+			return fmt.Errorf("failed to download source: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("bad status code pulling source: %s", resp.Status)
+		}
+
+		out, err := os.Create(cachedPath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, resp.Body); err != nil {
+			return err
+		}
+	}
+
+	if err := verifyTarballHash(cachedPath, b.manifest.Source.SHA256); err != nil {
+		return fmt.Errorf("source integrity check failed: %w", err)
+	}
+
+	if err := engine.ExtractArchiveStrip(cachedPath, b.sourceDir(), 1); err != nil {
+		return fmt.Errorf("failed to extract source tarball: %w", err)
+	}
+
+	return nil
+}
+
+func verifyTarballHash(filePath, expectedSHA string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		return err
+	}
+
+	actual := hex.EncodeToString(h.Sum(nil))
+	if !strings.EqualFold(actual, expectedSHA) {
+		return fmt.Errorf("mismatch (got %s, expected %s)", actual, expectedSHA)
+	}
 	return nil
 }
 
