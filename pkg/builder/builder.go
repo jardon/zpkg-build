@@ -481,10 +481,12 @@ func (b *Builder) assemblePackage() error {
 		}
 
 		if len(includes) > 0 && !matchesAnyInclude(relPath, includes) {
-			if info.IsDir() {
-				return filepath.SkipDir
+			if !(info.IsDir() && isIncludePrefix(relPath, includes)) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
 			}
-			return nil
 		}
 
 		dest := filepath.Join(pkgPath, relPath)
@@ -518,6 +520,16 @@ func matchesAnyInclude(relPath string, patterns []string) bool {
 func matchesAnyExclude(relPath string, patterns []string) bool {
 	for _, pattern := range patterns {
 		if matchPath(relPath, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+func isIncludePrefix(dirPath string, patterns []string) bool {
+	prefix := dirPath + "/"
+	for _, p := range patterns {
+		if strings.HasPrefix(p, prefix) {
 			return true
 		}
 	}
