@@ -319,7 +319,7 @@ func (c *ChrootEngine) CopyTarStream(ctx context.Context, tarReader io.Reader, g
 	}
 	defer os.RemoveAll(tmpDir)
 
-	if err := extractTar(tarReader, tmpDir); err != nil {
+	if err := extractTar(tarReader, tmpDir, 0); err != nil {
 		return fmt.Errorf("failed to extract tar stream: %w", err)
 	}
 

@@ -308,7 +308,7 @@ func (p *PodmanEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 		pw.Close()
 	}()
 
-	if err := extractTar(pr, hostDest); err != nil {
+	if err := extractTar(pr, hostDest, 0); err != nil {
 		pr.Close()
 		return fmt.Errorf("failed to extract tar: %w", err)
 	}

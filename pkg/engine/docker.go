@@ -292,7 +292,7 @@ func (d *DockerEngine) CopyFrom(ctx context.Context, guestSrc, hostDest string) 
 	}
 	defer reader.Close()
 
-	if err := extractTar(reader, hostDest); err != nil {
+	if err := extractTar(reader, hostDest, 0); err != nil {
 		return fmt.Errorf("failed to extract tar: %w", err)
 	}
 
