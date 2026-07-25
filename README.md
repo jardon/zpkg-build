@@ -81,6 +81,7 @@ export:
 | `rust` | Rust (rustup) |
 | `cmake` | CMake |
 | `make` | Make |
+| `autotools` | Autotools (configure/make) |
 | `meson` | Meson |
 | `maven` | Maven (Java) |
 | `poetry` | Poetry (Python) |

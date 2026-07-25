@@ -37,6 +37,8 @@ func GetPlugin(source PluginSource) Plugin {
 		return &CMakePlugin{source: source}
 	case "make":
 		return &MakePlugin{source: source}
+	case "autotools":
+		return &AutotoolsPlugin{source: source}
 	case "poetry":
 		return &PoetryPlugin{source: source}
 	case "maven":
