@@ -56,11 +56,17 @@ func LoadAndHydrateManifest(manifestPath string, activePlugin plugin.Plugin) (*R
 		return nil, "", nil, fmt.Errorf("failed to parse manifest: %w", err)
 	}
 
-	if len(manifest.Build.Steps) == 0 && activePlugin != nil {
-		manifest.Build.Steps = activePlugin.GetDefaultBuildSteps()
-	}
-	if len(manifest.Build.InstallSteps) == 0 && activePlugin != nil {
-		manifest.Build.InstallSteps = activePlugin.GetDefaultInstallSteps()
+	if activePlugin != nil {
+		pluginCommands := activePlugin.GetBuildCommands()
+
+		for name, args := range manifest.Build.Args {
+			if _, ok := pluginCommands[name]; !ok {
+				return nil, "", nil, fmt.Errorf("unknown build command %q for plugin %q", name, activePlugin.Name())
+			}
+			if err := ValidateArgs(args); err != nil {
+				return nil, "", nil, fmt.Errorf("invalid args for command %q: %w", name, err)
+			}
+		}
 	}
 
 	hydratedJSON, err := json.Marshal(manifest)

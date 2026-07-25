@@ -44,10 +44,9 @@ plugin:
   sha256: "..."
 
 build:
-  steps:
-    - "go build -o bin/app main.go"
-  install_steps:
-    - "cp bin/app $ZPKG_DEST/usr/bin/"
+  override-args:
+    build: "-o bin/app main.go"
+    install: "mkdir -p $ZPKG_DEST/usr/bin && cp bin/app $ZPKG_DEST/usr/bin/"
 
 build_deps:
   - name: "gcc"

@@ -27,8 +27,7 @@ type SourceBlock struct {
 }
 
 type BuildBlock struct {
-	Steps        []string `yaml:"steps"`
-	InstallSteps []string `yaml:"install_steps"`
+	Args map[string]string `yaml:"override-args,omitempty"`
 }
 
 type RecipeManifest struct {
