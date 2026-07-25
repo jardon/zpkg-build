@@ -25,15 +25,10 @@ func (p *MesonPlugin) GetCacheDirectories() []PackageCache {
 	return nil
 }
 
-func (p *MesonPlugin) GetDefaultBuildSteps() []string {
-	return []string{
-		"meson setup build",
-		"ninja -C build",
-	}
-}
-
-func (p *MesonPlugin) GetDefaultInstallSteps() []string {
-	return []string{
-		"DESTDIR=$ZPKG_DEST ninja -C build install",
+func (p *MesonPlugin) GetBuildCommands() map[string]BuildCommand {
+	return map[string]BuildCommand{
+		"configure": {Command: "meson", DefaultArgs: "setup build"},
+		"build":     {Command: "ninja", DefaultArgs: "-C build"},
+		"install":   {Command: "DESTDIR=$ZPKG_DEST ninja", DefaultArgs: "-C build install"},
 	}
 }

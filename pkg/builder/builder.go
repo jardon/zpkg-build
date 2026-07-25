@@ -455,27 +455,25 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	workDir := "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"
 
 	if stage == "build" || stage == "all" {
-		fmt.Println("    Running build steps...")
-		for _, step := range b.manifest.Build.Steps {
-			fmt.Printf("      > %s\n", step)
-			if err := eng.Run(ctx, engine.RunConfig{
-				EnvVars:    envVars,
-				WorkingDir: workDir,
-				Commands:   []string{step},
-			}); err != nil {
-				return fmt.Errorf("build step failed: %w", err)
-			}
-		}
+		pluginCommands := b.activePlugin.GetBuildCommands()
 
-		fmt.Println("    Running install steps...")
-		for _, step := range b.manifest.Build.InstallSteps {
-			fmt.Printf("      > %s\n", step)
+		fmt.Println("    Running build steps...")
+		for name, bc := range pluginCommands {
+			args := bc.DefaultArgs
+			if override, ok := b.manifest.Build.Args[name]; ok {
+				args = override
+			}
+			cmd := bc.Command
+			if args != "" {
+				cmd = bc.Command + " " + args
+			}
+			fmt.Printf("      > %s\n", cmd)
 			if err := eng.Run(ctx, engine.RunConfig{
 				EnvVars:    envVars,
 				WorkingDir: workDir,
-				Commands:   []string{step},
+				Commands:   []string{cmd},
 			}); err != nil {
-				return fmt.Errorf("install step failed: %w", err)
+				return fmt.Errorf("build step %q failed: %w", name, err)
 			}
 		}
 	}

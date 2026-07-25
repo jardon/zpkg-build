@@ -10,5 +10,4 @@ func (p *NoOpPlugin) GetExtractPath() string                { return "" }
 func (p *NoOpPlugin) GetPostExtractSteps() []string         { return nil }
 func (p *NoOpPlugin) GetEnvVars() map[string]string         { return nil }
 func (p *NoOpPlugin) GetCacheDirectories() []PackageCache   { return nil }
-func (p *NoOpPlugin) GetDefaultBuildSteps() []string        { return nil }
-func (p *NoOpPlugin) GetDefaultInstallSteps() []string      { return nil }
+func (p *NoOpPlugin) GetBuildCommands() map[string]BuildCommand { return nil }

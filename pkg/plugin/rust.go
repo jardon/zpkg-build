@@ -29,15 +29,9 @@ func (p *RustPlugin) GetCacheDirectories() []PackageCache {
 	}
 }
 
-func (p *RustPlugin) GetDefaultBuildSteps() []string {
-	return []string{
-		"cargo build --release",
-	}
-}
-
-func (p *RustPlugin) GetDefaultInstallSteps() []string {
-	return []string{
-		"mkdir -p $ZPKG_DEST/usr/bin",
-		"cp target/release/out $ZPKG_DEST/usr/bin/",
+func (p *RustPlugin) GetBuildCommands() map[string]BuildCommand {
+	return map[string]BuildCommand{
+		"build":   {Command: "cargo build", DefaultArgs: "--release"},
+		"install": {Command: "sh -c", DefaultArgs: "mkdir -p $ZPKG_DEST/usr/bin && cp target/release/out $ZPKG_DEST/usr/bin/"},
 	}
 }
