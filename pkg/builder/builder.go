@@ -21,17 +21,18 @@ import (
 )
 
 type Builder struct {
-	manifestPath string
-	cacheDir     string
-	manifest     *manifest.RecipeManifest
-	rawRecipe    map[string]interface{}
-	recipeHash   string
-	sourceHash   string
-	activePlugin plugin.Plugin
-	engine       engine.Engine
-	workspace    string
-	outputDir    string
-	noArchive    bool
+	manifestPath   string
+	cacheDir       string
+	manifest       *manifest.RecipeManifest
+	rawRecipe      map[string]interface{}
+	recipeHash     string
+	sourceHash     string
+	reproducibility manifest.Reproducibility
+	activePlugin   plugin.Plugin
+	engine         engine.Engine
+	workspace      string
+	outputDir      string
+	noArchive      bool
 }
 
 func New(manifestPath string) (*Builder, error) {
@@ -80,6 +81,11 @@ func (b *Builder) loadManifest() error {
 	b.manifest = m
 	b.activePlugin = plugin.GetPlugin(b.manifest.Plugin)
 	b.recipeHash = recipeHash
+	b.reproducibility = manifest.AnalyzeReproducibility(b.rawRecipe)
+
+	for _, w := range b.reproducibility.Warnings {
+		fmt.Fprintf(os.Stderr, "  [determinism] %s\n", w)
+	}
 
 	return nil
 }
