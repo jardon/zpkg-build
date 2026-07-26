@@ -28,6 +28,26 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 	}
 
 	if source, ok := recipe["source"].(map[string]interface{}); ok {
+		if path, ok := source["path"].(string); ok && path != "" {
+			warnings = append(warnings, "Local source path is not reproducible across environments.")
+		}
+
+		if git, ok := source["git"].(string); ok && git != "" {
+			ref, _ := source["ref"].(string)
+			if ref == "" {
+				warnings = append(warnings, "Git source has no pinned ref — build depends on default branch.")
+			} else if !IsCommitSHA(ref) {
+				warnings = append(warnings, fmt.Sprintf("Git ref '%s' is not a commit SHA — cannot guarantee reproducibility.", ref))
+			}
+		}
+
+		if url, ok := source["url"].(string); ok && url != "" {
+			sha, _ := source["sha256"].(string)
+			if sha == "" {
+				warnings = append(warnings, "URL source has no SHA-256 verification — integrity cannot be guaranteed.")
+			}
+		}
+
 		if patches, ok := source["patches"].([]interface{}); ok {
 			for idx, p := range patches {
 				if patchMap, ok := p.(map[string]interface{}); ok {
@@ -44,12 +64,11 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 	}
 
 	if build, ok := recipe["build"].(map[string]interface{}); ok {
-		if steps, ok := build["steps"].([]interface{}); ok {
-			for _, step := range steps {
-				if stepStr, ok := step.(string); ok {
-					if containsNetworkUtilities(stepStr) {
-						warnings = append(warnings, "Build step '"+stepStr+"' contains raw download utilities. Fetch dependencies via pinned plugins instead.")
-					}
+		if args, ok := build["override-args"].(map[string]interface{}); ok && len(args) > 0 {
+			warnings = append(warnings, "Build steps are overridden — plugin defaults are not used.")
+			for _, val := range args {
+				if valStr, ok := val.(string); ok && containsNetworkUtilities(valStr) {
+					warnings = append(warnings, "Build override '"+valStr+"' contains raw download utilities. Fetch dependencies via pinned plugins instead.")
 				}
 			}
 		}
@@ -59,6 +78,18 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 		Deterministic: len(warnings) == 0,
 		Warnings:      warnings,
 	}
+}
+
+func IsCommitSHA(ref string) bool {
+	if len(ref) != 40 {
+		return false
+	}
+	for _, c := range ref {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func containsNetworkUtilities(step string) bool {
