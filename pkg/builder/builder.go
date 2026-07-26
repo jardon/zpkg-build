@@ -216,21 +216,67 @@ func (b *Builder) Pull(ctx context.Context) error {
 	return nil
 }
 
-func (b *Builder) cloneGitSource(ctx context.Context) error {
-	args := []string{"clone", "--depth", "1"}
-
-	if b.manifest.Source.Ref != "" {
-		args = append(args, "--branch", b.manifest.Source.Ref)
+func (b *Builder) gitInit(url string) error {
+	if err := os.MkdirAll(b.sourceDir(), 0755); err != nil {
+		return fmt.Errorf("failed to create source directory: %w", err)
 	}
 
-	args = append(args, b.manifest.Source.Git, b.sourceDir())
+	cmd := exec.Command("git", "init")
+	cmd.Dir = b.sourceDir()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git init failed: %w\noutput: %s", err, string(output))
+	}
 
+	cmd = exec.Command("git", "remote", "add", "origin", url)
+	cmd.Dir = b.sourceDir()
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git remote add failed: %w\noutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func (b *Builder) cloneGitSource(ctx context.Context) error {
+	ref := b.manifest.Source.Ref
+	if ref == "" {
+		return fmt.Errorf("git source requires a ref (branch, tag, or commit SHA)")
+	}
+
+	if manifest.IsCommitSHA(ref) {
+		if err := b.gitInit(b.manifest.Source.Git); err != nil {
+			return err
+		}
+
+		cmd := exec.CommandContext(ctx, "git", "fetch", "--depth", "1", "origin", ref)
+		cmd.Dir = b.sourceDir()
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			cmd = exec.CommandContext(ctx, "git", "fetch", "origin")
+			cmd.Dir = b.sourceDir()
+			output, err = cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("git fetch failed: %w\noutput: %s", err, string(output))
+			}
+		}
+
+		cmd = exec.CommandContext(ctx, "git", "checkout", "FETCH_HEAD")
+		cmd.Dir = b.sourceDir()
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git checkout failed: %w\noutput: %s", err, string(output))
+		}
+
+		return nil
+	}
+
+	args := []string{"clone", "--depth", "1", "--branch", ref, b.manifest.Source.Git, b.sourceDir()}
 	cmd := exec.CommandContext(ctx, "git", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %w\noutput: %s", err, string(output))
 	}
-
 	return nil
 }
 
