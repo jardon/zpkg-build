@@ -11,6 +11,7 @@ import (
 var manifestFile string
 var outputDir string
 var noArchive bool
+var exportFormat string
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -94,11 +95,13 @@ func exportCmd() *cobra.Command {
 			}
 			b.SetOutputDir(outputDir)
 			b.SetNoArchive(noArchive)
+			b.SetExportFormat(exportFormat)
 			return b.Export(cmd.Context())
 		},
 	}
 	cmd.Flags().StringVar(&outputDir, "output-dir", ".", "Output directory for exported archives")
 	cmd.Flags().BoolVar(&noArchive, "no-archive", false, "Skip archiving and place files directly in output directory")
+	cmd.Flags().StringVar(&exportFormat, "format", "zpkg", "Export format: zpkg, tar.gz, tar, tar.xz, zip")
 	return cmd
 }
 

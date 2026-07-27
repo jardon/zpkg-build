@@ -59,9 +59,6 @@ runtime_deps:
 package:
   include:
     - "/usr/bin/app"
-
-export:
-  format: "tar.gz"
 ```
 
 ### Engines
