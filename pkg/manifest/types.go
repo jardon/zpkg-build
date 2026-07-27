@@ -43,9 +43,4 @@ type RecipeManifest struct {
 	BuildDeps    []Dependency        `yaml:"build_deps,omitempty"`
 	RuntimeDeps  []Dependency        `yaml:"runtime_deps,omitempty"`
 	Package      map[string][]string `yaml:"package"`
-	Export       ExportBlock         `yaml:"export"`
-}
-
-type ExportBlock struct {
-	Format string `yaml:"format"`
 }

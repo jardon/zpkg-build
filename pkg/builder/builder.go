@@ -32,6 +32,7 @@ type Builder struct {
 	engine         engine.Engine
 	workspace      string
 	outputDir      string
+	exportFormat   string
 	noArchive      bool
 }
 
@@ -64,6 +65,10 @@ func (b *Builder) SetOutputDir(dir string) {
 
 func (b *Builder) SetNoArchive(noArchive bool) {
 	b.noArchive = noArchive
+}
+
+func (b *Builder) SetExportFormat(format string) {
+	b.exportFormat = format
 }
 
 func (b *Builder) loadManifest() error {
@@ -550,7 +555,7 @@ func (b *Builder) Package(ctx context.Context) error {
 		return err
 	}
 
-	if !b.noArchive {
+	if !b.noArchive && b.exportFormat == "zpkg" {
 		fmt.Println("    Generating metadata...")
 		if err := packager.GenerateMetadata(
 			b.manifest.Name,
@@ -733,9 +738,9 @@ func (b *Builder) Export(ctx context.Context) error {
 		return nil
 	}
 
-	format := b.manifest.Export.Format
+	format := b.exportFormat
 	if format == "" {
-		format = "tar.gz"
+		format = "zpkg"
 	}
 
 	archiveName := fmt.Sprintf("%s-%s-%s.%s", b.manifest.Name, b.manifest.Version, b.manifest.Arch, format)
@@ -744,8 +749,20 @@ func (b *Builder) Export(ctx context.Context) error {
 	fmt.Printf("    Creating %s archive...\n", format)
 
 	switch format {
+	case "zpkg":
+		if err := b.createZpkg(archivePath); err != nil {
+			return err
+		}
 	case "tar.gz":
 		if err := b.createTarGz(archivePath); err != nil {
+			return err
+		}
+	case "tar":
+		if err := b.createTar(archivePath); err != nil {
+			return err
+		}
+	case "tar.xz":
+		if err := b.createTarXz(archivePath); err != nil {
 			return err
 		}
 	case "zip":
@@ -753,9 +770,7 @@ func (b *Builder) Export(ctx context.Context) error {
 			return err
 		}
 	default:
-		if err := b.createTarGz(archivePath); err != nil {
-			return err
-		}
+		return fmt.Errorf("unsupported export format: %s", format)
 	}
 
 	if err := tracker.MarkStepComplete(config.StepExport, b.sourceHash, b.recipeHash); err != nil {
@@ -782,6 +797,33 @@ func (b *Builder) createZip(archivePath string) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("zip failed: %w\noutput: %s", err, string(output))
+	}
+	return nil
+}
+
+func (b *Builder) createTar(archivePath string) error {
+	cmd := exec.Command("tar", "-cf", archivePath, "-C", b.pkgDir(), ".")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("tar failed: %w\noutput: %s", err, string(output))
+	}
+	return nil
+}
+
+func (b *Builder) createTarXz(archivePath string) error {
+	cmd := exec.Command("tar", "-cJf", archivePath, "-C", b.pkgDir(), ".")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("tar failed: %w\noutput: %s", err, string(output))
+	}
+	return nil
+}
+
+func (b *Builder) createZpkg(archivePath string) error {
+	cmd := exec.Command("tar", "-czf", archivePath, "-C", b.pkgDir(), ".")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("tar failed: %w\noutput: %s", err, string(output))
 	}
 	return nil
 }
