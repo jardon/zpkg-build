@@ -506,7 +506,15 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	}
 
 	envVars := b.activePlugin.GetEnvVars()
+	envVars["ZPKG_NAME"] = b.manifest.Name
+	envVars["ZPKG_VERSION"] = b.manifest.Version
+	envVars["ZPKG_ARCH"] = b.manifest.Arch
 	envVars["ZPKG_DEST"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/dest"
+	envVars["ZPKG_SRC"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/src"
+	envVars["ZPKG_BUILD"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"
+	envVars["ZPKG_PARTS"] = "/zpkg-build-workspace/parts/" + b.manifest.Name
+	envVars["ZPKG_PKG"] = "/zpkg-build-workspace/pkg"
+	envVars["ZPKG_EXPORT"] = "/zpkg-build-workspace/export"
 	envVars["ZPKG_WORKSPACE"] = "/zpkg-build-workspace"
 
 	workDir := "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"
