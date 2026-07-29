@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/jardon/zpkg-build/pkg/builder"
+	"github.com/jardon/zpkg-build/pkg/manifest"
 )
 
 var manifestFile string
@@ -28,6 +29,7 @@ func main() {
 	rootCmd.AddCommand(exportCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(statusCmd())
+	rootCmd.AddCommand(analyzeCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -130,6 +132,33 @@ func statusCmd() *cobra.Command {
 				return err
 			}
 			return b.Status()
+		},
+	}
+}
+
+func analyzeCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "analyze",
+		Short: "Check manifest reproducibility",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rawRecipe, err := manifest.LoadManifestRaw(manifestFile)
+			if err != nil {
+				return err
+			}
+
+			r := manifest.AnalyzeReproducibility(rawRecipe)
+
+			if r.Deterministic {
+				fmt.Println("✓ deterministic")
+				return nil
+			}
+
+			fmt.Println("✗ non-deterministic")
+			for _, w := range r.Warnings {
+				fmt.Printf("  - %s\n", w)
+			}
+			os.Exit(1)
+			return nil
 		},
 	}
 }
