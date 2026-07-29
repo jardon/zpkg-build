@@ -49,9 +49,12 @@ build:
     GOFLAGS: "-tags=netgo,static"
     LDFLAGS: "-s -w"
 
+# Metadata-only — documents a runtime requirement for the base image
 build_deps:
   - name: "gcc"
     min: "12.0"
+
+# Prebuilt — downloaded, verified, extracted into the sandbox
   - name: "zlib"
     version: "1.3.1"
     source: "https://artifact-server/zlib-1.3.1-linux-amd64.tar.gz"
