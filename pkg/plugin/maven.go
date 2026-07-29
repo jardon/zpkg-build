@@ -31,7 +31,7 @@ func (p *MavenPlugin) GetCacheDirectories() []PackageCache {
 func (p *MavenPlugin) GetBuildCommands() []string {
 	return []string{
 		"mvn clean package -DskipTests",
-		"mkdir -p $ZPKG_DEST/usr/share/app",
-		"cp target/*.jar $ZPKG_DEST/usr/share/app/",
+		"mkdir -p $ZPKG_DEST/usr/share/$ZPKG_NAME",
+		"cp target/*.jar $ZPKG_DEST/usr/share/$ZPKG_NAME/",
 	}
 }
