@@ -29,7 +29,9 @@ type SourceBlock struct {
 	Patches []PatchSource `yaml:"patches,omitempty"`
 }
 
-type BuildBlock struct{}
+type BuildBlock struct {
+	Env map[string]string `yaml:"env,omitempty"`
+}
 
 type RecipeManifest struct {
 	Name         string              `yaml:"name"`
