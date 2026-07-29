@@ -141,6 +141,12 @@ func (b *Builder) computeSourceHash() (string, error) {
 		hash.Write([]byte(patch.SHA256))
 	}
 
+	for _, dep := range b.manifest.BuildDeps {
+		if dep.Source != "" {
+			hash.Write([]byte(dep.Source + ":" + dep.SHA256))
+		}
+	}
+
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
@@ -210,6 +216,16 @@ func (b *Builder) Pull(ctx context.Context) error {
 		_, err := manifest.ResolveAndVerifyPatches(b.manifestPath, b.manifest.Source.Patches, patchCacheDir)
 		if err != nil {
 			return err
+		}
+	}
+
+	for _, dep := range b.manifest.BuildDeps {
+		if dep.Source == "" {
+			continue
+		}
+		fmt.Printf("    Resolving build dependency: %s...\n", dep.Name)
+		if err := b.resolveBuildDep(dep); err != nil {
+			return fmt.Errorf("failed to resolve build dependency %q: %w", dep.Name, err)
 		}
 	}
 
@@ -367,6 +383,41 @@ func verifyTarballHash(filePath, expectedSHA string) error {
 	return nil
 }
 
+func (b *Builder) resolveBuildDep(dep manifest.Dependency) error {
+	depCacheDir := filepath.Join(b.cacheDir, "cache", "build-deps")
+	ext := filepath.Ext(dep.Source)
+	cachedPath := filepath.Join(depCacheDir, dep.SHA256+ext)
+
+	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(depCacheDir, 0755); err != nil {
+			return err
+		}
+
+		fmt.Printf("    Downloading %s...\n", dep.Source)
+		resp, err := http.Get(dep.Source)
+		if err != nil {
+			return fmt.Errorf("failed to download: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("bad status: %s", resp.Status)
+		}
+
+		out, err := os.Create(cachedPath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, resp.Body); err != nil {
+			return err
+		}
+	}
+
+	return verifyTarballHash(cachedPath, dep.SHA256)
+}
+
 func (b *Builder) Build(ctx context.Context) error {
 	if err := b.Pull(ctx); err != nil {
 		return err
@@ -502,6 +553,36 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 			Commands: []string{step},
 		}); err != nil {
 			return fmt.Errorf("post-extract step failed: %w", err)
+		}
+	}
+
+	for _, dep := range b.manifest.BuildDeps {
+		if dep.Source == "" {
+			continue
+		}
+		depCacheDir := filepath.Join(b.cacheDir, "cache", "build-deps")
+		ext := filepath.Ext(dep.Source)
+		cachedPath := filepath.Join(depCacheDir, dep.SHA256+ext)
+
+		extractPath := dep.ExtractTo
+		if extractPath == "" {
+			extractPath = "/usr"
+		}
+
+		fmt.Printf("    Installing build dependency: %s -> %s\n", dep.Name, extractPath)
+		if err := eng.Run(ctx, engine.RunConfig{
+			Commands: []string{"mkdir -p " + extractPath},
+		}); err != nil {
+			return fmt.Errorf("failed to create extract directory for dep %q: %w", dep.Name, err)
+		}
+
+		tarReader, err := engine.DecompressArchive(cachedPath)
+		if err != nil {
+			return fmt.Errorf("failed to decompress build dep %q: %w", dep.Name, err)
+		}
+
+		if err := eng.CopyTarStream(ctx, tarReader, extractPath); err != nil {
+			return fmt.Errorf("failed to stream build dep %q into environment: %w", dep.Name, err)
 		}
 	}
 
