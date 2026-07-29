@@ -32,6 +32,7 @@ func (p *RustPlugin) GetCacheDirectories() []PackageCache {
 func (p *RustPlugin) GetBuildCommands() []string {
 	return []string{
 		"cargo build --release",
-		"sh -c mkdir -p $ZPKG_DEST/usr/bin && cp target/release/out $ZPKG_DEST/usr/bin/",
+		"mkdir -p $ZPKG_DEST/usr/bin",
+		"cp target/release/out $ZPKG_DEST/usr/bin/",
 	}
 }
