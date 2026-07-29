@@ -29,9 +29,7 @@ type SourceBlock struct {
 	Patches []PatchSource `yaml:"patches,omitempty"`
 }
 
-type BuildBlock struct {
-	Args map[string]string `yaml:"override-args,omitempty"`
-}
+type BuildBlock struct{}
 
 type RecipeManifest struct {
 	Name         string              `yaml:"name"`

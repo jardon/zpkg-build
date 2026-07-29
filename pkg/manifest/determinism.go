@@ -63,17 +63,6 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 		}
 	}
 
-	if build, ok := recipe["build"].(map[string]interface{}); ok {
-		if args, ok := build["override-args"].(map[string]interface{}); ok && len(args) > 0 {
-			warnings = append(warnings, "Build steps are overridden — plugin defaults are not used.")
-			for _, val := range args {
-				if valStr, ok := val.(string); ok && containsNetworkUtilities(valStr) {
-					warnings = append(warnings, "Build override '"+valStr+"' contains raw download utilities. Fetch dependencies via pinned plugins instead.")
-				}
-			}
-		}
-	}
-
 	return Reproducibility{
 		Deterministic: len(warnings) == 0,
 		Warnings:      warnings,
@@ -92,13 +81,4 @@ func IsCommitSHA(ref string) bool {
 	return true
 }
 
-func containsNetworkUtilities(step string) bool {
-	utils := []string{"curl ", "wget ", "git clone ", "npm install ", "pip install ", "cargo install "}
-	stepLower := strings.ToLower(step)
-	for _, util := range utils {
-		if strings.Contains(stepLower, util) {
-			return true
-		}
-	}
-	return false
-}
+

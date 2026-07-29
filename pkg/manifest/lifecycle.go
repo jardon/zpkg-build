@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-	"github.com/jardon/zpkg-build/pkg/plugin"
 )
 
 func ComputeRecipeHash(manifestPath string) (string, error) {
@@ -46,7 +45,7 @@ func ComputeHydratedRecipeHash(recipeMap map[string]interface{}) (string, error)
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func LoadAndHydrateManifest(manifestPath string, activePlugin plugin.Plugin) (*RecipeManifest, string, map[string]interface{}, error) {
+func LoadAndHydrateManifest(manifestPath string, _ any) (*RecipeManifest, string, map[string]interface{}, error) {
 	yamlData, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("failed to read manifest: %w", err)
@@ -55,19 +54,6 @@ func LoadAndHydrateManifest(manifestPath string, activePlugin plugin.Plugin) (*R
 	var manifest RecipeManifest
 	if err := yaml.Unmarshal(yamlData, &manifest); err != nil {
 		return nil, "", nil, fmt.Errorf("failed to parse manifest: %w", err)
-	}
-
-	if activePlugin != nil {
-		pluginCommands := activePlugin.GetBuildCommands()
-
-		for name, args := range manifest.Build.Args {
-			if _, ok := pluginCommands[name]; !ok {
-				return nil, "", nil, fmt.Errorf("unknown build command %q for plugin %q", name, activePlugin.Name())
-			}
-			if err := ValidateArgs(args); err != nil {
-				return nil, "", nil, fmt.Errorf("invalid args for command %q: %w", name, err)
-			}
-		}
 	}
 
 	for _, dep := range manifest.BuildDeps {
