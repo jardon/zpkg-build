@@ -17,6 +17,7 @@ zpkg-build -f package.yaml package   # assemble package root + metadata
 zpkg-build -f package.yaml export    # archive output to host
 zpkg-build -f package.yaml clean build  # purge state from a stage forward
 zpkg-build -f package.yaml status    # show cache and step state
+zpkg-build -f package.yaml analyze   # check manifest reproducibility
 ```
 
 ## Manifest
