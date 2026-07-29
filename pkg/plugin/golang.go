@@ -33,10 +33,10 @@ func (p *GoPlugin) GetCacheDirectories() []PackageCache {
 	}
 }
 
-func (p *GoPlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"download": {Command: "go", DefaultArgs: "mod download"},
-		"build":    {Command: "go build", DefaultArgs: "-v -o bin/$ZPKG_NAME main.go"},
-		"install":  {Command: "sh -c", DefaultArgs: "mkdir -p $ZPKG_DEST/usr/bin && cp bin/out $ZPKG_DEST/usr/bin/"},
+func (p *GoPlugin) GetBuildCommands() []string {
+	return []string{
+		"go mod download",
+		"go build -v -o bin/$ZPKG_NAME main.go",
+		"sh -c mkdir -p $ZPKG_DEST/usr/bin && cp bin/out $ZPKG_DEST/usr/bin/",
 	}
 }

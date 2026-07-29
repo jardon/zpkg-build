@@ -28,9 +28,9 @@ func (p *MavenPlugin) GetCacheDirectories() []PackageCache {
 	}
 }
 
-func (p *MavenPlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"build":   {Command: "mvn", DefaultArgs: "clean package -DskipTests"},
-		"install": {Command: "sh -c", DefaultArgs: "mkdir -p $ZPKG_DEST/usr/share/app && cp target/*.jar $ZPKG_DEST/usr/share/app/"},
+func (p *MavenPlugin) GetBuildCommands() []string {
+	return []string{
+		"mvn clean package -DskipTests",
+		"sh -c mkdir -p $ZPKG_DEST/usr/share/app && cp target/*.jar $ZPKG_DEST/usr/share/app/",
 	}
 }
