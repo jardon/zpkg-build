@@ -598,6 +598,10 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	envVars["ZPKG_EXPORT"] = "/zpkg-build-workspace/export"
 	envVars["ZPKG_WORKSPACE"] = "/zpkg-build-workspace"
 
+	for k, v := range b.manifest.Build.Env {
+		envVars[k] = v
+	}
+
 	workDir := "/zpkg-build-workspace/components/" + b.manifest.Name + "/build"
 
 	if stage == "build" || stage == "all" {
