@@ -43,6 +43,12 @@ plugin:
   source: "https://go.dev/dl/go1.20.linux-amd64.tar.gz"
   sha256: "..."
 
+build:
+  env:
+    CGO_ENABLED: "0"
+    GOFLAGS: "-tags=netgo,static"
+    LDFLAGS: "-s -w"
+
 build_deps:
   - name: "gcc"
     min: "12.0"
@@ -60,6 +66,25 @@ package:
   include:
     - "/usr/bin/app"
 ```
+
+### Build environment
+
+The following variables are available inside the sandbox during all build steps:
+
+| Variable | Description |
+|----------|-------------|
+| `ZPKG_WORKSPACE` | Workspace root (`/zpkg-build-workspace`) |
+| `ZPKG_COMPONENTS` | Component root (`/zpkg-build-workspace/components/<name>`) |
+| `ZPKG_SRC` | Source directory |
+| `ZPKG_BUILD` | Build directory (also the working directory) |
+| `ZPKG_DEST` | Package destination (install target) |
+| `ZPKG_PKG` | Package staging directory |
+| `ZPKG_EXPORT` | Export directory |
+| `ZPKG_NAME` | Package name from manifest |
+| `ZPKG_VERSION` | Package version from manifest |
+| `ZPKG_ARCH` | Package architecture from manifest |
+
+Plugin-specific variables (e.g. `GOPATH`, `CARGO_HOME`, `JAVA_HOME`) are set by each plugin's `GetEnvVars()`.
 
 ### Engines
 
