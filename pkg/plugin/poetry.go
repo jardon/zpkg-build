@@ -32,6 +32,7 @@ func (p *PoetryPlugin) GetCacheDirectories() []PackageCache {
 func (p *PoetryPlugin) GetBuildCommands() []string {
 	return []string{
 		"poetry install --no-root",
-		"sh -c mkdir -p $ZPKG_DEST/usr/lib/$ZPKG_NAME && cp -r . $ZPKG_DEST/usr/lib/$ZPKG_NAME/",
+		"mkdir -p $ZPKG_DEST/usr/lib/$ZPKG_NAME",
+		"cp -r . $ZPKG_DEST/usr/lib/$ZPKG_NAME/",
 	}
 }
