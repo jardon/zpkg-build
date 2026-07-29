@@ -100,9 +100,9 @@ func (b *Builder) setupWorkspace() error {
 	b.workspace = filepath.Join(b.cacheDir, "workspaces", projectName+"-build")
 
 	dirs := []string{
-		filepath.Join(b.workspace, "parts", projectName, "src"),
-		filepath.Join(b.workspace, "parts", projectName, "build"),
-		filepath.Join(b.workspace, "parts", projectName, "dest"),
+		filepath.Join(b.workspace, "components", projectName, "src"),
+		filepath.Join(b.workspace, "components", projectName, "build"),
+		filepath.Join(b.workspace, "components", projectName, "dest"),
 		filepath.Join(b.workspace, "pkg"),
 		filepath.Join(b.workspace, "export"),
 		filepath.Join(b.workspace, ".zpkg-build-state"),
@@ -145,15 +145,15 @@ func (b *Builder) computeSourceHash() (string, error) {
 }
 
 func (b *Builder) sourceDir() string {
-	return filepath.Join(b.workspace, "parts", b.manifest.Name, "src")
+	return filepath.Join(b.workspace, "components", b.manifest.Name, "src")
 }
 
 func (b *Builder) buildDir() string {
-	return filepath.Join(b.workspace, "parts", b.manifest.Name, "build")
+	return filepath.Join(b.workspace, "components", b.manifest.Name, "build")
 }
 
 func (b *Builder) destDir() string {
-	return filepath.Join(b.workspace, "parts", b.manifest.Name, "dest")
+	return filepath.Join(b.workspace, "components", b.manifest.Name, "dest")
 }
 
 func (b *Builder) pkgDir() string {
@@ -509,15 +509,15 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	envVars["ZPKG_NAME"] = b.manifest.Name
 	envVars["ZPKG_VERSION"] = b.manifest.Version
 	envVars["ZPKG_ARCH"] = b.manifest.Arch
-	envVars["ZPKG_DEST"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/dest"
-	envVars["ZPKG_SRC"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/src"
-	envVars["ZPKG_BUILD"] = "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"
-	envVars["ZPKG_PARTS"] = "/zpkg-build-workspace/parts/" + b.manifest.Name
+	envVars["ZPKG_DEST"] = "/zpkg-build-workspace/components/" + b.manifest.Name + "/dest"
+	envVars["ZPKG_SRC"] = "/zpkg-build-workspace/components/" + b.manifest.Name + "/src"
+	envVars["ZPKG_BUILD"] = "/zpkg-build-workspace/components/" + b.manifest.Name + "/build"
+	envVars["ZPKG_COMPONENTS"] = "/zpkg-build-workspace/components/" + b.manifest.Name
 	envVars["ZPKG_PKG"] = "/zpkg-build-workspace/pkg"
 	envVars["ZPKG_EXPORT"] = "/zpkg-build-workspace/export"
 	envVars["ZPKG_WORKSPACE"] = "/zpkg-build-workspace"
 
-	workDir := "/zpkg-build-workspace/parts/" + b.manifest.Name + "/build"
+	workDir := "/zpkg-build-workspace/components/" + b.manifest.Name + "/build"
 
 	if stage == "build" || stage == "all" {
 		pluginCommands := b.activePlugin.GetBuildCommands()
@@ -888,11 +888,11 @@ func (b *Builder) Clean(step string) error {
 
 	dirsToClean := map[config.Step][]string{
 		config.StepPull: {
-			filepath.Join(b.workspace, "parts", b.manifest.Name, "src"),
+			filepath.Join(b.workspace, "components", b.manifest.Name, "src"),
 		},
 		config.StepBuild: {
-			filepath.Join(b.workspace, "parts", b.manifest.Name, "build"),
-			filepath.Join(b.workspace, "parts", b.manifest.Name, "dest"),
+			filepath.Join(b.workspace, "components", b.manifest.Name, "build"),
+			filepath.Join(b.workspace, "components", b.manifest.Name, "dest"),
 		},
 		config.StepPackage: {
 			filepath.Join(b.workspace, "pkg"),
