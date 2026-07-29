@@ -5,10 +5,13 @@ import (
 )
 
 type Dependency struct {
-	Name string `yaml:"name"`
-	Min  string `yaml:"min,omitempty"`
-	Max  string `yaml:"max,omitempty"`
-	Ver  string `yaml:"version,omitempty"`
+	Name      string `yaml:"name"`
+	Min       string `yaml:"min,omitempty"`
+	Max       string `yaml:"max,omitempty"`
+	Ver       string `yaml:"version,omitempty"`
+	Source    string `yaml:"source,omitempty"`
+	SHA256    string `yaml:"sha256,omitempty"`
+	ExtractTo string `yaml:"extract-to,omitempty"`
 }
 
 type PatchSource struct {

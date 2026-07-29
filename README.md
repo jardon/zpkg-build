@@ -51,6 +51,11 @@ build:
 build_deps:
   - name: "gcc"
     min: "12.0"
+  - name: "zlib"
+    version: "1.3.1"
+    source: "https://artifact-server/zlib-1.3.1-linux-amd64.tar.gz"
+    sha256: "abc123..."
+    extract-to: "/usr"
 
 runtime_deps:
   - name: "libc"

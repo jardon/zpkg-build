@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 	"github.com/jardon/zpkg-build/pkg/plugin"
@@ -66,6 +67,15 @@ func LoadAndHydrateManifest(manifestPath string, activePlugin plugin.Plugin) (*R
 			if err := ValidateArgs(args); err != nil {
 				return nil, "", nil, fmt.Errorf("invalid args for command %q: %w", name, err)
 			}
+		}
+	}
+
+	for _, dep := range manifest.BuildDeps {
+		if dep.Source != "" && (dep.SHA256 == "" || len(dep.SHA256) != 64) {
+			return nil, "", nil, fmt.Errorf("build dependency %q with a source URL requires a valid 64-character SHA-256 hash", dep.Name)
+		}
+		if dep.ExtractTo != "" && !filepath.IsAbs(dep.ExtractTo) {
+			return nil, "", nil, fmt.Errorf("build dependency %q extract-to path must be absolute", dep.Name)
 		}
 	}
 
