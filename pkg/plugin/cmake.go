@@ -25,10 +25,10 @@ func (p *CMakePlugin) GetCacheDirectories() []PackageCache {
 	return nil
 }
 
-func (p *CMakePlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"configure": {Command: "cmake", DefaultArgs: "-B build -S ."},
-		"build":     {Command: "cmake --build", DefaultArgs: "build"},
-		"install":   {Command: "DESTDIR=$ZPKG_DEST cmake --install", DefaultArgs: "build"},
+func (p *CMakePlugin) GetBuildCommands() []string {
+	return []string{
+		"cmake -B build -S .",
+		"cmake --build build",
+		"DESTDIR=$ZPKG_DEST cmake --install build",
 	}
 }

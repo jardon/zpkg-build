@@ -604,18 +604,14 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 		pluginCommands := b.activePlugin.GetBuildCommands()
 
 		fmt.Println("    Running build steps...")
-		for name, bc := range pluginCommands {
-			cmd := bc.Command
-			if bc.DefaultArgs != "" {
-				cmd = bc.Command + " " + bc.DefaultArgs
-			}
+		for _, cmd := range pluginCommands {
 			fmt.Printf("      > %s\n", cmd)
 			if err := eng.Run(ctx, engine.RunConfig{
 				EnvVars:    envVars,
 				WorkingDir: workDir,
 				Commands:   []string{cmd},
 			}); err != nil {
-				return fmt.Errorf("build step %q failed: %w", name, err)
+				return fmt.Errorf("build step failed: %w", err)
 			}
 		}
 	}

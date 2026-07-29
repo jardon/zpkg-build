@@ -29,9 +29,9 @@ func (p *PoetryPlugin) GetCacheDirectories() []PackageCache {
 	}
 }
 
-func (p *PoetryPlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"build":   {Command: "poetry", DefaultArgs: "install --no-root"},
-		"install": {Command: "sh -c", DefaultArgs: "mkdir -p $ZPKG_DEST/usr/lib/$ZPKG_NAME && cp -r . $ZPKG_DEST/usr/lib/$ZPKG_NAME/"},
+func (p *PoetryPlugin) GetBuildCommands() []string {
+	return []string{
+		"poetry install --no-root",
+		"sh -c mkdir -p $ZPKG_DEST/usr/lib/$ZPKG_NAME && cp -r . $ZPKG_DEST/usr/lib/$ZPKG_NAME/",
 	}
 }

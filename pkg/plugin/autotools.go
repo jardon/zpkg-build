@@ -12,10 +12,10 @@ func (p *AutotoolsPlugin) GetPostExtractSteps() []string { return nil }
 func (p *AutotoolsPlugin) GetEnvVars() map[string]string { return nil }
 func (p *AutotoolsPlugin) GetCacheDirectories() []PackageCache { return nil }
 
-func (p *AutotoolsPlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"configure": {Command: "./configure", DefaultArgs: "--prefix=/usr"},
-		"make":      {Command: "make", DefaultArgs: ""},
-		"install":   {Command: "make install", DefaultArgs: "DESTDIR=$ZPKG_DEST"},
+func (p *AutotoolsPlugin) GetBuildCommands() []string {
+	return []string{
+		"./configure --prefix=/usr",
+		"make",
+		"make install DESTDIR=$ZPKG_DEST",
 	}
 }

@@ -11,9 +11,9 @@ func (p *MakePlugin) GetPostExtractSteps() []string        { return nil }
 func (p *MakePlugin) GetEnvVars() map[string]string        { return nil }
 func (p *MakePlugin) GetCacheDirectories() []PackageCache  { return nil }
 
-func (p *MakePlugin) GetBuildCommands() map[string]BuildCommand {
-	return map[string]BuildCommand{
-		"make":    {Command: "make", DefaultArgs: ""},
-		"install": {Command: "make install", DefaultArgs: "DESTDIR=$ZPKG_DEST"},
+func (p *MakePlugin) GetBuildCommands() []string {
+	return []string{
+		"make",
+		"make install DESTDIR=$ZPKG_DEST",
 	}
 }

@@ -12,11 +12,6 @@ type PackageCache struct {
 	GuestPath  string
 }
 
-type BuildCommand struct {
-	Command     string
-	DefaultArgs string
-}
-
 type Plugin interface {
 	Name() string
 	Version() string
@@ -24,7 +19,7 @@ type Plugin interface {
 	GetPostExtractSteps() []string
 	GetEnvVars() map[string]string
 	GetCacheDirectories() []PackageCache
-	GetBuildCommands() map[string]BuildCommand
+	GetBuildCommands() []string
 }
 
 func GetPlugin(source PluginSource) Plugin {
