@@ -43,11 +43,6 @@ plugin:
   source: "https://go.dev/dl/go1.20.linux-amd64.tar.gz"
   sha256: "..."
 
-build:
-  override-args:
-    build: "-o bin/app main.go"
-    install: "mkdir -p $ZPKG_DEST/usr/bin && cp bin/app $ZPKG_DEST/usr/bin/"
-
 build_deps:
   - name: "gcc"
     min: "12.0"

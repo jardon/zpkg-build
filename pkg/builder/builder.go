@@ -605,13 +605,9 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 
 		fmt.Println("    Running build steps...")
 		for name, bc := range pluginCommands {
-			args := bc.DefaultArgs
-			if override, ok := b.manifest.Build.Args[name]; ok {
-				args = override
-			}
 			cmd := bc.Command
-			if args != "" {
-				cmd = bc.Command + " " + args
+			if bc.DefaultArgs != "" {
+				cmd = bc.Command + " " + bc.DefaultArgs
 			}
 			fmt.Printf("      > %s\n", cmd)
 			if err := eng.Run(ctx, engine.RunConfig{
