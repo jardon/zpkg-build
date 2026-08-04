@@ -2,6 +2,23 @@
 
 A CLI tool that compiles and packages software inside isolated sandbox environments using a declarative YAML manifest.
 
+## Dependencies
+
+For Debian-based distributions, install these build dependencies:
+```bash
+sudo apt install -y golang-go libbtrfs-dev libgpgme-dev lxc-dev
+```
+
+For Fedora-based distributions, install these build dependencies:
+```bash
+sudo dnf install -y golang libbtrfs gpgme2 lxc
+```
+
+For Arch-based distributions, install these build dependencies:
+```bash
+sudo pacman -Sy go btrfs-progs gpgme lxc
+```
+
 ## Build
 
 ```bash
@@ -112,9 +129,3 @@ Plugin-specific variables (e.g. `GOPATH`, `CARGO_HOME`, `JAVA_HOME`) are set by 
 | `maven` | Maven (Java) |
 | `poetry` | Poetry (Python) |
 | `none` | No build tool |
-
-## Dependencies
-
-```bash
-sudo apt install -y libbtrfs-dev libgpgme-dev lxc-dev
-```
