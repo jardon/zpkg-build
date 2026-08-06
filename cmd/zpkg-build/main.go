@@ -30,6 +30,7 @@ func main() {
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(statusCmd())
 	rootCmd.AddCommand(analyzeCmd())
+	rootCmd.AddCommand(hashCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -158,6 +159,21 @@ func analyzeCmd() *cobra.Command {
 				fmt.Printf("  - %s\n", w)
 			}
 			os.Exit(1)
+			return nil
+		},
+	}
+}
+
+func hashCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "hash",
+		Short: "Print canonical SHA-256 of the manifest",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			hash, err := manifest.ComputeRecipeHash(manifestFile)
+			if err != nil {
+				return err
+			}
+			fmt.Println(hash)
 			return nil
 		},
 	}
