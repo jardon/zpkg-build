@@ -36,6 +36,6 @@ func (p *GoPlugin) GetCacheDirectories() []PackageCache {
 func (p *GoPlugin) GetBuildCommands() []string {
 	return []string{
 		"go mod download",
-		"go build -v -o $ZPKG_DEST/usr/bin/$ZPKG_NAME main.go",
+		commandWithArgs("go build", p.source.Args, "-v -o $ZPKG_DEST/usr/bin/$ZPKG_NAME main.go"),
 	}
 }

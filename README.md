@@ -61,6 +61,12 @@ plugin:
   version: "1.20"
   source: "https://go.dev/dl/go1.20.linux-amd64.tar.gz"
   sha256: "..."
+  go-build-args:
+    - "-trimpath"
+    - "-ldflags=-s -w"
+    - "-o"
+    - "$ZPKG_DEST/usr/bin/hello"
+    - "main.go"
 
 build:
   env:
@@ -130,3 +136,20 @@ Plugin-specific variables (e.g. `GOPATH`, `CARGO_HOME`, `JAVA_HOME`) are set by 
 | `maven` | Maven (Java) |
 | `poetry` | Poetry (Python) |
 | `none` | No build tool |
+
+### Plugin build arguments
+
+Each plugin accepts a plugin-specific list of arguments that override the default arguments of its primary build command. The command prefix is fixed and cannot be changed.
+
+| Plugin | Key | Command |
+|--------|-----|---------|
+| `golang` | `go-build-args` | `go build` |
+| `rust` | `cargo-build-args` | `cargo build` |
+| `cmake` | `cmake-config-args` | `cmake -B build -S .` |
+| `make` | `make-args` | `make` |
+| `autotools` | `configure-args` | `./configure` |
+| `meson` | `meson-args` | `meson setup build` |
+| `maven` | `maven-args` | `mvn clean package` |
+| `poetry` | `poetry-args` | `poetry install` |
+
+Environment variables such as `$ZPKG_DEST` are expanded inside arguments. Arguments must not contain shell metacharacters (`` ` ``, `$(`, `|`, `;`, `>`, `<`, `&&`, `||`, `&`) or network fetch utilities (`curl`, `wget`, `git clone`, `npm install`, `pip install`, `cargo install`).
