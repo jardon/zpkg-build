@@ -14,7 +14,7 @@ func (p *AutotoolsPlugin) GetCacheDirectories() []PackageCache { return nil }
 
 func (p *AutotoolsPlugin) GetBuildCommands() []string {
 	return []string{
-		"./configure --prefix=/usr",
+		commandWithArgs("./configure", p.source.Args, "--prefix=/usr"),
 		"make",
 		"make install DESTDIR=$ZPKG_DEST",
 	}

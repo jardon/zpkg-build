@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jardon/zpkg-build/pkg/plugin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,6 +55,12 @@ func LoadAndHydrateManifest(manifestPath string, _ any) (*RecipeManifest, string
 	var manifest RecipeManifest
 	if err := yaml.Unmarshal(yamlData, &manifest); err != nil {
 		return nil, "", nil, fmt.Errorf("failed to parse manifest: %w", err)
+	}
+
+	if len(manifest.Plugin.Args) > 0 {
+		if err := plugin.ValidateArgs(manifest.Plugin.Name, manifest.Plugin.Args); err != nil {
+			return nil, "", nil, fmt.Errorf("invalid plugin build args: %w", err)
+		}
 	}
 
 	for _, dep := range manifest.BuildDeps {

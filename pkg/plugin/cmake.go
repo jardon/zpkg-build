@@ -27,7 +27,7 @@ func (p *CMakePlugin) GetCacheDirectories() []PackageCache {
 
 func (p *CMakePlugin) GetBuildCommands() []string {
 	return []string{
-		"cmake -B build -S .",
+		commandWithArgs("cmake -B build -S .", p.source.Args, ""),
 		"cmake --build build",
 		"DESTDIR=$ZPKG_DEST cmake --install build",
 	}

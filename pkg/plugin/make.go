@@ -13,7 +13,7 @@ func (p *MakePlugin) GetCacheDirectories() []PackageCache  { return nil }
 
 func (p *MakePlugin) GetBuildCommands() []string {
 	return []string{
-		"make",
+		commandWithArgs("make", p.source.Args, ""),
 		"make install DESTDIR=$ZPKG_DEST",
 	}
 }

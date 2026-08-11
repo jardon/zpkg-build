@@ -27,7 +27,7 @@ func (p *MesonPlugin) GetCacheDirectories() []PackageCache {
 
 func (p *MesonPlugin) GetBuildCommands() []string {
 	return []string{
-		"meson setup build",
+		commandWithArgs("meson setup build", p.source.Args, ""),
 		"ninja -C build",
 		"DESTDIR=$ZPKG_DEST ninja -C build install",
 	}
