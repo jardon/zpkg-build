@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,6 +35,7 @@ type Builder struct {
 	outputDir      string
 	exportFormat   string
 	noArchive      bool
+	keepContainer  bool
 }
 
 func New(manifestPath string) (*Builder, error) {
@@ -69,6 +71,10 @@ func (b *Builder) SetNoArchive(noArchive bool) {
 
 func (b *Builder) SetExportFormat(format string) {
 	b.exportFormat = format
+}
+
+func (b *Builder) SetKeepContainer(keep bool) {
+	b.keepContainer = keep
 }
 
 func (b *Builder) loadManifest() error {
@@ -172,6 +178,43 @@ func (b *Builder) exportDir() string {
 
 func (b *Builder) stateTracker() *config.Tracker {
 	return config.NewTracker(b.workspace)
+}
+
+type KeptEngine struct {
+	Engine string `json:"engine"`
+	ID     string `json:"id"`
+}
+
+func (b *Builder) keptEngineFile() string {
+	return filepath.Join(b.workspace, ".zpkg-build-state", "kept-engine.json")
+}
+
+func (b *Builder) recordKeptEngine(engineName, id string) error {
+	if err := os.MkdirAll(filepath.Dir(b.keptEngineFile()), 0755); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(KeptEngine{Engine: engineName, ID: id}, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(b.keptEngineFile(), data, 0644)
+}
+
+func debugExecHint(engineName, id string) string {
+	switch engineName {
+	case "podman":
+		return "podman exec -it " + id + " /bin/sh"
+	case "docker":
+		return "docker exec -it " + id + " /bin/sh"
+	case "lxc":
+		return "lxc-attach -n " + id
+	case "chroot":
+		return "sudo chroot " + id + " /bin/sh"
+	default:
+		return id
+	}
 }
 
 func (b *Builder) Pull(ctx context.Context) error {
@@ -515,7 +558,18 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	if err := eng.CreateEnvironment(ctx, b.manifest.Base, mounts); err != nil {
 		return err
 	}
-	defer eng.Destroy(ctx)
+
+	if b.keepContainer {
+		if err := b.recordKeptEngine(eng.Name(), eng.ID()); err != nil {
+			return err
+		}
+		fmt.Printf("    Debug: keeping %s environment alive for inspection\n", eng.Name())
+		fmt.Printf("      id: %s\n", eng.ID())
+		fmt.Printf("      exec: %s\n", debugExecHint(eng.Name(), eng.ID()))
+		fmt.Printf("      clean up with: zpkg-build destroy\n")
+	} else {
+		defer eng.Destroy(ctx)
+	}
 
 	if pluginArchivePath != "" && pluginExtractPath != "" {
 		if strings.Contains(pluginExtractPath, "$HOME") {

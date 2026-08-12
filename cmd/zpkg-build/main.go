@@ -13,6 +13,7 @@ var manifestFile string
 var outputDir string
 var noArchive bool
 var exportFormat string
+var keepContainer bool
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -22,6 +23,7 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&manifestFile, "file", "f", "package.yaml", "Path to package.yaml manifest")
+	rootCmd.PersistentFlags().BoolVar(&keepContainer, "keep", false, "Keep the build environment alive after the build for debugging")
 
 	rootCmd.AddCommand(pullCmd())
 	rootCmd.AddCommand(buildCmd())
@@ -65,6 +67,7 @@ func buildCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			b.SetKeepContainer(keepContainer)
 			return b.Build(cmd.Context())
 		},
 	}
@@ -79,6 +82,7 @@ func packageCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			b.SetKeepContainer(keepContainer)
 			return b.Package(cmd.Context())
 		},
 	}
@@ -99,6 +103,7 @@ func exportCmd() *cobra.Command {
 			b.SetOutputDir(outputDir)
 			b.SetNoArchive(noArchive)
 			b.SetExportFormat(exportFormat)
+			b.SetKeepContainer(keepContainer)
 			return b.Export(cmd.Context())
 		},
 	}
