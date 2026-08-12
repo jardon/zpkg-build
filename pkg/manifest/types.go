@@ -25,6 +25,7 @@ type SourceBlock struct {
 	Git     string        `yaml:"git,omitempty"`
 	URL     string        `yaml:"url,omitempty"`
 	SHA256  string        `yaml:"sha256,omitempty"`
+	MD5     string        `yaml:"md5,omitempty" json:",omitempty"`
 	Ref     string        `yaml:"ref,omitempty"`
 	Patches []PatchSource `yaml:"patches,omitempty"`
 }

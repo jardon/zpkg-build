@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -141,6 +142,9 @@ func (b *Builder) computeSourceHash() (string, error) {
 	hash := sha256.New()
 
 	sourceData := fmt.Sprintf("%s:%s:%s:%s:%s", b.manifest.Source.Git, b.manifest.Source.Ref, b.manifest.Source.Path, b.manifest.Source.URL, b.manifest.Source.SHA256)
+	if b.manifest.Source.MD5 != "" {
+		sourceData += ":" + b.manifest.Source.MD5
+	}
 	hash.Write([]byte(sourceData))
 
 	for _, patch := range b.manifest.Source.Patches {
@@ -435,14 +439,33 @@ func (b *Builder) copyLocalSource(ctx context.Context) error {
 	return nil
 }
 
+func (b *Builder) sourceChecksum() (string, error) {
+	if b.manifest.Source.SHA256 != "" {
+		if len(b.manifest.Source.SHA256) != 64 {
+			return "", fmt.Errorf("source url sha256 must be a 64-character hex hash")
+		}
+		return b.manifest.Source.SHA256, nil
+	}
+
+	if b.manifest.Source.MD5 != "" {
+		if len(b.manifest.Source.MD5) != 32 {
+			return "", fmt.Errorf("source url md5 must be a 32-character hex hash")
+		}
+		return b.manifest.Source.MD5, nil
+	}
+
+	return "", fmt.Errorf("source url requires a valid SHA-256 (64 hex) or MD5 (32 hex) checksum")
+}
+
 func (b *Builder) downloadTarballSource() error {
-	if b.manifest.Source.SHA256 == "" || len(b.manifest.Source.SHA256) != 64 {
-		return fmt.Errorf("source url requires a valid 64-character SHA-256 hash")
+	checksum, err := b.sourceChecksum()
+	if err != nil {
+		return err
 	}
 
 	cacheDir := filepath.Join(b.cacheDir, "cache", "tarballs")
 	ext := filepath.Ext(b.manifest.Source.URL)
-	cachedPath := filepath.Join(cacheDir, b.manifest.Source.SHA256+ext)
+	cachedPath := filepath.Join(cacheDir, checksum+ext)
 
 	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(cacheDir, 0755); err != nil {
@@ -471,7 +494,7 @@ func (b *Builder) downloadTarballSource() error {
 		}
 	}
 
-	if err := verifyTarballHash(cachedPath, b.manifest.Source.SHA256); err != nil {
+	if err := verifyTarballHash(cachedPath, checksum); err != nil {
 		return fmt.Errorf("source integrity check failed: %w", err)
 	}
 
@@ -482,21 +505,34 @@ func (b *Builder) downloadTarballSource() error {
 	return nil
 }
 
-func verifyTarballHash(filePath, expectedSHA string) error {
+func verifyTarballHash(filePath, expectedHash string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		return err
+	var actual string
+
+	switch len(expectedHash) {
+	case 64:
+		h := sha256.New()
+		if _, err := io.Copy(h, file); err != nil {
+			return err
+		}
+		actual = hex.EncodeToString(h.Sum(nil))
+	case 32:
+		h := md5.New()
+		if _, err := io.Copy(h, file); err != nil {
+			return err
+		}
+		actual = hex.EncodeToString(h.Sum(nil))
+	default:
+		return fmt.Errorf("unsupported checksum length %d (expected 32 or 64 hex characters)", len(expectedHash))
 	}
 
-	actual := hex.EncodeToString(h.Sum(nil))
-	if !strings.EqualFold(actual, expectedSHA) {
-		return fmt.Errorf("mismatch (got %s, expected %s)", actual, expectedSHA)
+	if !strings.EqualFold(actual, expectedHash) {
+		return fmt.Errorf("mismatch (got %s, expected %s)", actual, expectedHash)
 	}
 	return nil
 }
