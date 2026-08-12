@@ -20,6 +20,7 @@ type RunConfig struct {
 
 type Engine interface {
 	Name() string
+	ID() string
 	CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error
 	Run(ctx context.Context, config RunConfig) error
 	RunOutput(ctx context.Context, config RunConfig) (string, error)

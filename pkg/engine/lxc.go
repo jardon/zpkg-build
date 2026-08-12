@@ -30,6 +30,10 @@ func (l *LXCEngine) Name() string {
 	return "lxc"
 }
 
+func (l *LXCEngine) ID() string {
+	return l.containerName
+}
+
 func (l *LXCEngine) CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error {
 	l.containerName = fmt.Sprintf("zpkg-build-%d", os.Getpid())
 	containerPath := filepath.Join(l.configDir, l.containerName)

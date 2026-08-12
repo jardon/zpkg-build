@@ -30,6 +30,10 @@ func (p *PodmanEngine) Name() string {
 	return "podman"
 }
 
+func (p *PodmanEngine) ID() string {
+	return p.containerID
+}
+
 func (p *PodmanEngine) resolveSocketPath() string {
 	if uid := os.Getuid(); uid != 0 {
 		return fmt.Sprintf("unix:///run/user/%d/podman/podman.sock", uid)
