@@ -35,6 +35,6 @@ func (p *RustPlugin) GetBuildCommands() []string {
 	return []string{
 		commandWithArgs("cargo build", p.source.Args, "--release"),
 		"mkdir -p $ZPKG_DEST/usr/bin",
-		"cp target/release/out $ZPKG_DEST/usr/bin/",
+		"cp target/release/$ZPKG_NAME $ZPKG_DEST/usr/bin/",
 	}
 }
