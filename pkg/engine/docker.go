@@ -31,6 +31,10 @@ func (d *DockerEngine) Name() string {
 	return "docker"
 }
 
+func (d *DockerEngine) ID() string {
+	return d.containerID
+}
+
 func (d *DockerEngine) ensureClient() error {
 	if d.client != nil {
 		return nil

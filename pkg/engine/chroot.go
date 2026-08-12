@@ -29,6 +29,10 @@ func (c *ChrootEngine) Name() string {
 	return "chroot"
 }
 
+func (c *ChrootEngine) ID() string {
+	return c.rootfsPath
+}
+
 func (c *ChrootEngine) CreateEnvironment(ctx context.Context, baseImage string, mounts []Mount) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
