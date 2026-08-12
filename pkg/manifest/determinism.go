@@ -43,8 +43,9 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 
 		if url, ok := source["url"].(string); ok && url != "" {
 			sha, _ := source["sha256"].(string)
-			if sha == "" {
-				warnings = append(warnings, "URL source has no SHA-256 verification — integrity cannot be guaranteed.")
+			md5val, _ := source["md5"].(string)
+			if sha == "" && md5val == "" {
+				warnings = append(warnings, "URL source has no SHA-256 or MD5 verification — integrity cannot be guaranteed.")
 			}
 		}
 
