@@ -217,6 +217,81 @@ func debugExecHint(engineName, id string) string {
 	}
 }
 
+func (b *Builder) loadKeptEngine() (*KeptEngine, error) {
+	data, err := os.ReadFile(b.keptEngineFile())
+	if err != nil {
+		return nil, err
+	}
+
+	var kept KeptEngine
+	if err := json.Unmarshal(data, &kept); err != nil {
+		return nil, err
+	}
+
+	return &kept, nil
+}
+
+func (b *Builder) Destroy() error {
+	if err := b.setupWorkspace(); err != nil {
+		return err
+	}
+
+	kept, err := b.loadKeptEngine()
+	if err != nil {
+		return fmt.Errorf("no kept environment found (run the build stage with --keep): %w", err)
+	}
+
+	fmt.Printf("    Destroying kept %s environment...\n", kept.Engine)
+	if err := destroyKeptEnvironment(kept); err != nil {
+		return fmt.Errorf("failed to destroy %s environment: %w\n    (sidecar left at %s; remove it manually if the environment is already gone)", kept.Engine, err, b.keptEngineFile())
+	}
+
+	_ = os.Remove(b.keptEngineFile())
+	fmt.Println("    destroyed")
+	return nil
+}
+
+func destroyKeptEnvironment(kept *KeptEngine) error {
+	switch kept.Engine {
+	case "podman":
+		return runHostCommand("podman", "rm", "-f", kept.ID)
+	case "docker":
+		return runHostCommand("docker", "rm", "-f", kept.ID)
+	case "lxc":
+		return runHostCommand("lxc-destroy", "-f", "-n", kept.ID)
+	case "chroot":
+		return destroyChrootRootfs(kept.ID)
+	default:
+		return fmt.Errorf("unsupported engine for cleanup: %s", kept.Engine)
+	}
+}
+
+func runHostCommand(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s failed: %w\noutput: %s", name, err, string(output))
+	}
+	return nil
+}
+
+func destroyChrootRootfs(rootfsPath string) error {
+	targets := []string{
+		filepath.Join(rootfsPath, "zpkg-build-workspace"),
+		filepath.Join(rootfsPath, "dev", "pts"),
+		filepath.Join(rootfsPath, "dev"),
+		filepath.Join(rootfsPath, "sys"),
+		filepath.Join(rootfsPath, "proc"),
+	}
+
+	for _, target := range targets {
+		_ = syscall.Unmount(target, 0)
+		_ = syscall.Unmount(target, syscall.MNT_DETACH)
+	}
+
+	return os.RemoveAll(rootfsPath)
+}
+
 func (b *Builder) Pull(ctx context.Context) error {
 	fmt.Println("==> Stage: pull")
 

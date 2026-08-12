@@ -34,12 +34,13 @@ zpkg-build -f package.yaml build --keep  # compile and keep the sandbox alive fo
 zpkg-build -f package.yaml package   # assemble package root + metadata
 zpkg-build -f package.yaml export    # archive output to host
 zpkg-build -f package.yaml clean build  # purge state from a stage forward
+zpkg-build -f package.yaml destroy   # destroy a sandbox kept alive by --keep
 zpkg-build -f package.yaml status    # show cache and step state
 zpkg-build -f package.yaml analyze   # check manifest reproducibility
 zpkg-build -f package.yaml hash      # print canonical SHA-256 of manifest
 ```
 
-With `--keep`, the build environment (container/rootfs) is left running after the build stage so it can be inspected. The engine identifier is written to `.zpkg-build-state/kept-engine.json` in the workspace for later cleanup.
+With `--keep`, the build environment (container/rootfs) is left running after the build stage so it can be inspected. The engine identifier is written to `.zpkg-build-state/kept-engine.json` in the workspace, and `zpkg-build destroy` removes the kept environment (podman/docker/lxc/chroot) and clears that state file.
 
 ## Manifest
 

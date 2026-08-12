@@ -30,6 +30,7 @@ func main() {
 	rootCmd.AddCommand(packageCmd())
 	rootCmd.AddCommand(exportCmd())
 	rootCmd.AddCommand(cleanCmd())
+	rootCmd.AddCommand(destroyCmd())
 	rootCmd.AddCommand(statusCmd())
 	rootCmd.AddCommand(analyzeCmd())
 	rootCmd.AddCommand(hashCmd())
@@ -124,6 +125,20 @@ func cleanCmd() *cobra.Command {
 				return err
 			}
 			return b.Clean(args[0])
+		},
+	}
+}
+
+func destroyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "destroy",
+		Short: "Destroy the build environment kept alive by a previous --keep build",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			b, err := newBuilder()
+			if err != nil {
+				return err
+			}
+			return b.Destroy()
 		},
 	}
 }
