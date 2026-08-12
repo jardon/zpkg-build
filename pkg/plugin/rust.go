@@ -8,11 +8,13 @@ func (p *RustPlugin) Name() string    { return "rust" }
 func (p *RustPlugin) Version() string { return p.source.Version }
 
 func (p *RustPlugin) GetExtractPath() string {
-	return "/usr/local"
+	return "/tmp/zpkg-rust"
 }
 
 func (p *RustPlugin) GetPostExtractSteps() []string {
-	return nil
+	return []string{
+		"sh /tmp/zpkg-rust/rust-*/install.sh",
+	}
 }
 
 func (p *RustPlugin) GetEnvVars() map[string]string {
