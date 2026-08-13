@@ -769,6 +769,19 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 
 	workDir := "/zpkg-build-workspace/components/" + b.manifest.Name + "/build"
 
+	if bp, ok := b.activePlugin.(interface{ GetBuildDirectory() string }); ok {
+		if buildDir := bp.GetBuildDirectory(); buildDir != "" {
+			if err := eng.Run(ctx, engine.RunConfig{
+				EnvVars:    envVars,
+				WorkingDir: workDir,
+				Commands:   []string{"mkdir -p " + buildDir},
+			}); err != nil {
+				return fmt.Errorf("failed to create plugin build directory: %w", err)
+			}
+			workDir += "/" + buildDir
+		}
+	}
+
 	if stage == "build" || stage == "all" {
 		pluginCommands := b.activePlugin.GetBuildCommands()
 
