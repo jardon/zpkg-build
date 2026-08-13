@@ -20,8 +20,10 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 	}
 
 	if plugin, ok := recipe["plugin"].(map[string]interface{}); ok {
-		if sha, ok := plugin["sha256"].(string); !ok || len(sha) != 64 {
-			warnings = append(warnings, "Plugin compiler toolchain is missing a valid SHA-256 checksum verification.")
+		if source, hasSource := plugin["source"].(string); hasSource && source != "" {
+			if sha, ok := plugin["sha256"].(string); !ok || len(sha) != 64 {
+				warnings = append(warnings, "Plugin compiler toolchain is missing a valid SHA-256 checksum verification.")
+			}
 		}
 	} else {
 		warnings = append(warnings, "No toolchain plugin defined. Compilation depends entirely on the host configuration.")

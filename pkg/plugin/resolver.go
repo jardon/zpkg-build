@@ -14,6 +14,10 @@ import (
 func ResolveAndStage(spec PluginSource, cacheDir string) (string, error) {
 	expandedSource := os.ExpandEnv(spec.Source)
 
+	if strings.TrimSpace(expandedSource) == "" {
+		return "", nil
+	}
+
 	isRemote := strings.HasPrefix(expandedSource, "http://") || strings.HasPrefix(expandedSource, "https://")
 
 	var sourcePath string
