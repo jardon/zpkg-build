@@ -656,7 +656,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 
 	var pluginArchivePath string
 	var pluginExtractPath string
-	if b.activePlugin.Name() != "none" && b.activePlugin.Name() != "" {
+	if b.manifest.Plugin.Source != "" {
 		pluginCacheDir := filepath.Join(b.cacheDir, "cache")
 		hostArchivePath, err := plugin.ResolveAndStage(b.manifest.Plugin, pluginCacheDir)
 		if err != nil {
