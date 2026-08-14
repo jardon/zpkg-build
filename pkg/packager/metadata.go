@@ -27,12 +27,13 @@ type PackageMetadata struct {
 	Reproducibility manifest.Reproducibility `json:"reproducibility"`
 	BuiltAt         time.Time                `json:"built_at"`
 	Plugin          plugin.PluginSource      `json:"plugin"`
+	Licenses        []manifest.License       `json:"licenses,omitempty"`
 	BuildDeps       []manifest.Dependency    `json:"build_deps,omitempty"`
 	RuntimeDeps     []manifest.Dependency    `json:"runtime_deps,omitempty"`
 	Contents        []FileMeta               `json:"contents"`
 }
 
-func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe map[string]interface{}, toolchain plugin.PluginSource, buildDeps, runtimeDeps []manifest.Dependency) error {
+func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe map[string]interface{}, toolchain plugin.PluginSource, licenses []manifest.License, buildDeps, runtimeDeps []manifest.Dependency) error {
 	var files []FileMeta
 
 	err := filepath.Walk(pkgDir, func(path string, info os.FileInfo, err error) error {
@@ -83,6 +84,7 @@ func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe 
 		Reproducibility: reproStats,
 		BuiltAt:         time.Now().UTC(),
 		Plugin:          toolchain,
+		Licenses:        licenses,
 		BuildDeps:       buildDeps,
 		RuntimeDeps:     runtimeDeps,
 		Contents:        files,

@@ -99,6 +99,10 @@ func (b *Builder) loadManifest() error {
 		fmt.Fprintf(os.Stderr, "  [determinism] %s\n", w)
 	}
 
+	for _, w := range m.LicenseWarnings() {
+		fmt.Fprintf(os.Stderr, "  [license] %s\n", w)
+	}
+
 	return nil
 }
 
@@ -818,6 +822,10 @@ func (b *Builder) Package(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.installLicenseFiles(); err != nil {
+		return err
+	}
+
 	if !b.noArchive && b.exportFormat == "zpkg" {
 		fmt.Println("    Generating metadata...")
 		if err := packager.GenerateMetadata(
@@ -827,6 +835,7 @@ func (b *Builder) Package(ctx context.Context) error {
 			b.recipeHash,
 			b.rawRecipe,
 			b.manifest.Plugin,
+			b.manifest.EffectiveLicenses(),
 			b.manifest.BuildDeps,
 			b.manifest.RuntimeDeps,
 		); err != nil {
@@ -887,6 +896,105 @@ func (b *Builder) assemblePackage() error {
 
 		return copyFile(path, dest)
 	})
+}
+
+func (b *Builder) installLicenseFiles() error {
+	licenses := b.manifest.EffectiveLicenses()
+	if len(licenses) == 0 {
+		return nil
+	}
+
+	licDir := filepath.Join(b.pkgDir(), "usr", "share", "licenses", b.manifest.Name)
+	if err := os.MkdirAll(licDir, 0755); err != nil {
+		return fmt.Errorf("failed to create license directory: %w", err)
+	}
+
+	for _, lic := range licenses {
+		dest := filepath.Join(licDir, sanitizeLicenseName(lic.Name))
+
+		switch {
+		case lic.File != "":
+			src := lic.File
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(filepath.Dir(b.manifestPath), src)
+			}
+			fmt.Printf("    Installing license: %s\n", lic.Name)
+			if err := copyFile(src, dest); err != nil {
+				return fmt.Errorf("failed to copy license %q: %w", lic.Name, err)
+			}
+		case lic.URL != "":
+			fmt.Printf("    Downloading license: %s\n", lic.Name)
+			cachedPath, err := b.fetchLicenseText(lic)
+			if err != nil {
+				return err
+			}
+			if err := copyFile(cachedPath, dest); err != nil {
+				return fmt.Errorf("failed to copy license %q: %w", lic.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (b *Builder) fetchLicenseText(lic manifest.License) (string, error) {
+	cacheDir := filepath.Join(b.cacheDir, "cache", "licenses")
+
+	cacheName := sanitizeLicenseName(lic.Name)
+	if lic.SHA256 != "" {
+		cacheName = lic.SHA256
+	}
+	cachedPath := filepath.Join(cacheDir, cacheName)
+
+	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(cacheDir, 0755); err != nil {
+			return "", err
+		}
+
+		fmt.Printf("    Downloading %s...\n", lic.URL)
+		resp, err := http.Get(lic.URL)
+		if err != nil {
+			return "", fmt.Errorf("failed to download license %q: %w", lic.Name, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("bad status downloading license %q: %s", lic.Name, resp.Status)
+		}
+
+		out, err := os.Create(cachedPath)
+		if err != nil {
+			return "", err
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, resp.Body); err != nil {
+			return "", err
+		}
+	}
+
+	if lic.SHA256 != "" {
+		if err := verifyTarballHash(cachedPath, lic.SHA256); err != nil {
+			return "", fmt.Errorf("license %q integrity check failed: %w", lic.Name, err)
+		}
+	}
+
+	return cachedPath, nil
+}
+
+func sanitizeLicenseName(name string) string {
+	var sb strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.' {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteRune('_')
+		}
+	}
+	if sb.Len() == 0 {
+		return "LICENSE"
+	}
+	return sb.String()
 }
 
 func normalizePatterns(patterns []string) []string {

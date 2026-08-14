@@ -66,6 +66,16 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 		}
 	}
 
+	if licenses, ok := recipe["licenses"].([]interface{}); ok {
+		for idx, l := range licenses {
+			if lm, ok := l.(map[string]interface{}); ok {
+				if file, ok := lm["file"].(string); ok && file != "" {
+					warnings = append(warnings, fmt.Sprintf("License [%d] references a local file — not reproducible across environments.", idx))
+				}
+			}
+		}
+	}
+
 	return Reproducibility{
 		Deterministic: len(warnings) == 0,
 		Warnings:      warnings,
