@@ -48,7 +48,11 @@ With `--keep`, the build environment (container/rootfs) is left running after th
 name: "hello-world"
 version: "1.0.0"
 arch: "amd64"
-license: "MIT"
+licenses:
+  - name: "MIT"
+  - name: "Apache-2.0"
+  - name: "Custom Proprietary"
+    file: "licenses/proprietary.txt"
 
 source:
   git: "https://github.com/example/repo"
@@ -98,6 +102,26 @@ package:
   include:
     - "/usr/bin/app"
 ```
+
+### Licenses
+
+Packages may declare one or more licenses via the `licenses:` list. Each entry has a `name` plus an optional `file:` (local, resolved relative to the manifest) or `url:` (remote) pointing at the license text. A `sha256` may accompany a `url:` for integrity verification.
+
+```yaml
+licenses:
+  - name: "MIT"
+  - name: "Custom Proprietary"
+    file: "licenses/proprietary.txt"
+  - name: "End User License"
+    url: "https://example.com/eula.txt"
+    sha256: "..."
+```
+
+The legacy `license: "MIT"` string field is still supported and is equivalent to `licenses: [{name: MIT}]`; the `licenses:` list takes precedence when both are present.
+
+- License text from `file:`/`url:` entries is installed into `/usr/share/licenses/<package-name>/` inside the package root. Identifier-only entries (standard SPDX names with no text source) are recorded in `metadata.json` but install no file.
+- License names that are not known SPDX identifiers are flagged with a warning unless a `file:` or `url:` provides the text.
+- Licenses referencing a local `file:` are **not reproducible** across environments — `analyze` reports the manifest as non-deterministic.
 
 ### Build environment
 

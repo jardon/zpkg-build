@@ -72,6 +72,10 @@ func LoadAndHydrateManifest(manifestPath string, _ any) (*RecipeManifest, string
 		}
 	}
 
+	if err := manifest.ValidateLicenses(filepath.Dir(manifestPath)); err != nil {
+		return nil, "", nil, err
+	}
+
 	hydratedJSON, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("failed to serialize hydrated manifest: %w", err)

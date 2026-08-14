@@ -20,6 +20,13 @@ type PatchSource struct {
 	SHA256 string `yaml:"sha256"`
 }
 
+type License struct {
+	Name   string `yaml:"name"`
+	File   string `yaml:"file,omitempty"`
+	URL    string `yaml:"url,omitempty"`
+	SHA256 string `yaml:"sha256,omitempty"`
+}
+
 type SourceBlock struct {
 	Path    string        `yaml:"path,omitempty"`
 	Git     string        `yaml:"git,omitempty"`
@@ -39,6 +46,7 @@ type RecipeManifest struct {
 	Version      string              `yaml:"version"`
 	Arch         string              `yaml:"arch"`
 	License      string              `yaml:"license,omitempty"`
+	Licenses     []License           `yaml:"licenses,omitempty"`
 	Source       SourceBlock         `yaml:"source"`
 	Engine       string              `yaml:"engine"`
 	Base         string              `yaml:"base"`
@@ -47,4 +55,14 @@ type RecipeManifest struct {
 	BuildDeps    []Dependency        `yaml:"build_deps,omitempty"`
 	RuntimeDeps  []Dependency        `yaml:"runtime_deps,omitempty"`
 	Package      map[string][]string `yaml:"package"`
+}
+
+func (m *RecipeManifest) EffectiveLicenses() []License {
+	if len(m.Licenses) > 0 {
+		return m.Licenses
+	}
+	if m.License != "" {
+		return []License{{Name: m.License}}
+	}
+	return nil
 }
