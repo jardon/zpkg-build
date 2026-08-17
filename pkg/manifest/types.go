@@ -11,7 +11,9 @@ type Dependency struct {
 	Ver       string `yaml:"version,omitempty"`
 	Source    string `yaml:"source,omitempty"`
 	SHA256    string `yaml:"sha256,omitempty"`
+	MD5       string `yaml:"md5,omitempty"`
 	ExtractTo string `yaml:"extract-to,omitempty"`
+	Rename    string `yaml:"rename,omitempty"`
 }
 
 type PatchSource struct {

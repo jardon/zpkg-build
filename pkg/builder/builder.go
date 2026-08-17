@@ -157,7 +157,7 @@ func (b *Builder) computeSourceHash() (string, error) {
 
 	for _, dep := range b.manifest.BuildDeps {
 		if dep.Source != "" {
-			hash.Write([]byte(dep.Source + ":" + dep.SHA256))
+			hash.Write([]byte(dep.Source + ":" + depChecksum(dep)))
 		}
 	}
 
@@ -461,6 +461,13 @@ func (b *Builder) sourceChecksum() (string, error) {
 	return "", fmt.Errorf("source url requires a valid SHA-256 (64 hex) or MD5 (32 hex) checksum")
 }
 
+func depChecksum(dep manifest.Dependency) string {
+	if dep.SHA256 != "" {
+		return dep.SHA256
+	}
+	return dep.MD5
+}
+
 func (b *Builder) downloadTarballSource() error {
 	checksum, err := b.sourceChecksum()
 	if err != nil {
@@ -544,7 +551,7 @@ func verifyTarballHash(filePath, expectedHash string) error {
 func (b *Builder) resolveBuildDep(dep manifest.Dependency) error {
 	depCacheDir := filepath.Join(b.cacheDir, "cache", "build-deps")
 	ext := filepath.Ext(dep.Source)
-	cachedPath := filepath.Join(depCacheDir, dep.SHA256+ext)
+	cachedPath := filepath.Join(depCacheDir, depChecksum(dep)+ext)
 
 	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(depCacheDir, 0755); err != nil {
@@ -573,7 +580,7 @@ func (b *Builder) resolveBuildDep(dep manifest.Dependency) error {
 		}
 	}
 
-	return verifyTarballHash(cachedPath, dep.SHA256)
+	return verifyTarballHash(cachedPath, depChecksum(dep))
 }
 
 func (b *Builder) Build(ctx context.Context) error {
@@ -731,7 +738,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 		}
 		depCacheDir := filepath.Join(b.cacheDir, "cache", "build-deps")
 		ext := filepath.Ext(dep.Source)
-		cachedPath := filepath.Join(depCacheDir, dep.SHA256+ext)
+		cachedPath := filepath.Join(depCacheDir, depChecksum(dep)+ext)
 
 		extractPath := dep.ExtractTo
 		if extractPath == "" {
@@ -752,6 +759,19 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 
 		if err := eng.CopyTarStream(ctx, tarReader, extractPath); err != nil {
 			return fmt.Errorf("failed to stream build dep %q into environment: %w", dep.Name, err)
+		}
+
+		if dep.Rename != "" {
+			topLevel, err := engine.TopLevelDir(cachedPath)
+			if err != nil {
+				return fmt.Errorf("failed to determine top-level dir for dep %q: %w", dep.Name, err)
+			}
+			if topLevel != dep.Rename {
+				mvCmd := fmt.Sprintf("mv %s/%s %s/%s", extractPath, topLevel, extractPath, dep.Rename)
+				if err := eng.Run(ctx, engine.RunConfig{Commands: []string{mvCmd}}); err != nil {
+					return fmt.Errorf("failed to rename dep %q from %q to %q: %w", dep.Name, topLevel, dep.Rename, err)
+				}
+			}
 		}
 	}
 
