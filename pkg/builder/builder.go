@@ -152,7 +152,7 @@ func (b *Builder) computeSourceHash() (string, error) {
 	hash.Write([]byte(sourceData))
 
 	for _, patch := range b.manifest.Source.Patches {
-		hash.Write([]byte(patch.SHA256))
+		hash.Write([]byte(manifest.PatchChecksum(patch)))
 	}
 
 	for _, dep := range b.manifest.BuildDeps {

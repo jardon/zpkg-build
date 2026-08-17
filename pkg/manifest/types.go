@@ -19,7 +19,8 @@ type Dependency struct {
 type PatchSource struct {
 	Path   string `yaml:"path,omitempty"`
 	URL    string `yaml:"url,omitempty"`
-	SHA256 string `yaml:"sha256"`
+	SHA256 string `yaml:"sha256,omitempty"`
+	MD5    string `yaml:"md5,omitempty"`
 }
 
 type License struct {

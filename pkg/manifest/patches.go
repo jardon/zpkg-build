@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -11,19 +12,28 @@ import (
 	"strings"
 )
 
+func PatchChecksum(patch PatchSource) string {
+	if len(patch.SHA256) == 64 {
+		return patch.SHA256
+	}
+	return patch.MD5
+}
+
 func ResolveAndVerifyPatches(manifestPath string, patches []PatchSource, cacheDir string) ([]string, error) {
 	manifestDir := filepath.Dir(manifestPath)
 	var verifiedPatchPaths []string
 
 	for idx, patch := range patches {
-		if patch.SHA256 == "" || len(patch.SHA256) != 64 {
-			return nil, fmt.Errorf("patch [%d] is missing a valid 64-character SHA-256 hash", idx)
+		hasSHA := len(patch.SHA256) == 64
+		hasMD5 := len(patch.MD5) == 32
+		if !hasSHA && !hasMD5 {
+			return nil, fmt.Errorf("patch [%d] requires a valid SHA-256 (64 hex) or MD5 (32 hex) checksum", idx)
 		}
 
 		var targetPath string
 
 		if patch.URL != "" {
-			targetPath = filepath.Join(cacheDir, "patches", patch.SHA256+".patch")
+			targetPath = filepath.Join(cacheDir, "patches", PatchChecksum(patch)+".patch")
 			if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 					return nil, err
@@ -41,7 +51,8 @@ func ResolveAndVerifyPatches(manifestPath string, patches []PatchSource, cacheDi
 			return nil, fmt.Errorf("patch [%d] must declare either a 'path' or a 'url'", idx)
 		}
 
-		if err := verifyPatchHash(targetPath, patch.SHA256); err != nil {
+		expected := PatchChecksum(patch)
+		if err := verifyPatchHash(targetPath, expected); err != nil {
 			return nil, fmt.Errorf("integrity check failed for patch [%d] (%s): %w", idx, targetPath, err)
 		}
 
@@ -51,21 +62,31 @@ func ResolveAndVerifyPatches(manifestPath string, patches []PatchSource, cacheDi
 	return verifiedPatchPaths, nil
 }
 
-func verifyPatchHash(filePath, expectedSHA string) error {
+func verifyPatchHash(filePath, expected string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return err
-	}
-
-	actualSHA := hex.EncodeToString(hash.Sum(nil))
-	if !strings.EqualFold(actualSHA, expectedSHA) {
-		return fmt.Errorf("mismatch (got %s, expected %s)", actualSHA, expectedSHA)
+	if len(expected) == 64 {
+		hash := sha256.New()
+		if _, err := io.Copy(hash, file); err != nil {
+			return err
+		}
+		actual := hex.EncodeToString(hash.Sum(nil))
+		if !strings.EqualFold(actual, expected) {
+			return fmt.Errorf("SHA-256 mismatch (got %s, expected %s)", actual, expected)
+		}
+	} else {
+		hash := md5.New()
+		if _, err := io.Copy(hash, file); err != nil {
+			return err
+		}
+		actual := hex.EncodeToString(hash.Sum(nil))
+		if !strings.EqualFold(actual, expected) {
+			return fmt.Errorf("MD5 mismatch (got %s, expected %s)", actual, expected)
+		}
 	}
 	return nil
 }

@@ -55,8 +55,9 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 			for idx, p := range patches {
 				if patchMap, ok := p.(map[string]interface{}); ok {
 					sha, hasSha := patchMap["sha256"].(string)
-					if !hasSha || len(sha) != 64 {
-						warnings = append(warnings, fmt.Sprintf("Patch [%d] is missing a valid SHA-256 checksum. This invalidates static caching.", idx))
+					md5, hasMD5 := patchMap["md5"].(string)
+					if (!hasSha || len(sha) != 64) && (!hasMD5 || len(md5) != 32) {
+						warnings = append(warnings, fmt.Sprintf("Patch [%d] is missing a valid SHA-256 or MD5 checksum. This invalidates static caching.", idx))
 					}
 					if url, hasURL := patchMap["url"].(string); hasURL && url != "" {
 						warnings = append(warnings, "Recipe relies on a remote patch URL: "+url+". Pre-downloading via a local patch directory is preferred for offline reliability.")
