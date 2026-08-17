@@ -173,6 +173,19 @@ func ExtractArchive(path string, destPath string) error {
 	return ExtractArchiveStrip(path, destPath, 0)
 }
 
+func TopLevelDir(cachedPath string) (string, error) {
+	reader, err := DecompressArchive(cachedPath)
+	if err != nil {
+		return "", err
+	}
+	tr := tar.NewReader(reader)
+	header, err := tr.Next()
+	if err != nil {
+		return "", fmt.Errorf("failed to read tar header: %w", err)
+	}
+	return strings.SplitN(header.Name, "/", 2)[0], nil
+}
+
 func ExtractArchiveStrip(path string, destPath string, strip int) error {
 	reader, err := DecompressArchive(path)
 	if err != nil {

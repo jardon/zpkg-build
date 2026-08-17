@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jardon/zpkg-build/pkg/plugin"
 	"gopkg.in/yaml.v3"
@@ -64,11 +65,18 @@ func LoadAndHydrateManifest(manifestPath string, _ any) (*RecipeManifest, string
 	}
 
 	for _, dep := range manifest.BuildDeps {
-		if dep.Source != "" && (dep.SHA256 == "" || len(dep.SHA256) != 64) {
-			return nil, "", nil, fmt.Errorf("build dependency %q with a source URL requires a valid 64-character SHA-256 hash", dep.Name)
+		if dep.Source != "" {
+			hasSHA := len(dep.SHA256) == 64
+			hasMD5 := len(dep.MD5) == 32
+			if !hasSHA && !hasMD5 {
+				return nil, "", nil, fmt.Errorf("build dependency %q with a source URL requires a valid SHA-256 (64 hex) or MD5 (32 hex) checksum", dep.Name)
+			}
 		}
 		if dep.ExtractTo != "" && !filepath.IsAbs(dep.ExtractTo) {
 			return nil, "", nil, fmt.Errorf("build dependency %q extract-to path must be absolute", dep.Name)
+		}
+		if dep.Rename != "" && strings.Contains(dep.Rename, "/") {
+			return nil, "", nil, fmt.Errorf("build dependency %q rename must not contain path separators", dep.Name)
 		}
 	}
 
