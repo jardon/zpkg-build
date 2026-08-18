@@ -62,6 +62,38 @@ func New(manifestPath string) (*Builder, error) {
 	return b, nil
 }
 
+func NewFromManifest(manifestPath string, m *manifest.RecipeManifest, rawRecipe map[string]interface{}, recipeHash string) (*Builder, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	cacheDir := filepath.Join(homeDir, ".local", "share", "zpkg-build")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	b := &Builder{
+		manifestPath:   manifestPath,
+		cacheDir:       cacheDir,
+		manifest:       m,
+		rawRecipe:      rawRecipe,
+		recipeHash:     recipeHash,
+		activePlugin:   plugin.GetPlugin(m.Plugin),
+		reproducibility: manifest.AnalyzeReproducibility(rawRecipe),
+	}
+
+	for _, w := range b.reproducibility.Warnings {
+		fmt.Fprintf(os.Stderr, "  [determinism] %s\n", w)
+	}
+
+	for _, w := range m.LicenseWarnings() {
+		fmt.Fprintf(os.Stderr, "  [license] %s\n", w)
+	}
+
+	return b, nil
+}
+
 func (b *Builder) SetOutputDir(dir string) {
 	b.outputDir = dir
 }
