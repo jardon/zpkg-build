@@ -67,6 +67,12 @@ func AnalyzeReproducibility(recipe map[string]interface{}) Reproducibility {
 		}
 	}
 
+	if build, ok := recipe["build"].(map[string]interface{}); ok {
+		if overrides, ok := build["override-steps"].(string); ok && strings.TrimSpace(overrides) != "" {
+			warnings = append(warnings, "Build uses override-steps — custom commands are not managed by a plugin and may not be repeatable.")
+		}
+	}
+
 	if licenses, ok := recipe["licenses"].([]interface{}); ok {
 		for idx, l := range licenses {
 			if lm, ok := l.(map[string]interface{}); ok {
@@ -94,5 +100,3 @@ func IsCommitSHA(ref string) bool {
 	}
 	return true
 }
-
-

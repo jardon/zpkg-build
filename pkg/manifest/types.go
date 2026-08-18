@@ -41,7 +41,8 @@ type SourceBlock struct {
 }
 
 type BuildBlock struct {
-	Env map[string]string `yaml:"env,omitempty"`
+	Env           map[string]string `yaml:"env,omitempty"`
+	OverrideSteps string            `yaml:"override-steps,omitempty"`
 }
 
 type RecipeManifest struct {
