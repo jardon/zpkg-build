@@ -238,4 +238,28 @@ func TestAnalyzeReproducibility(t *testing.T) {
 			t.Error("expected warning about local license file")
 		}
 	})
+
+	t.Run("override-steps present", func(t *testing.T) {
+		recipe := map[string]interface{}{
+			"base":   "alpine:3.23@sha256:abc",
+			"plugin": map[string]interface{}{"name": "golang", "source": "x", "sha256": strings.Repeat("a", 64)},
+			"source": map[string]interface{}{"url": "x", "sha256": strings.Repeat("b", 64)},
+			"build": map[string]interface{}{
+				"override-steps": "make\nmake install",
+			},
+		}
+		result := AnalyzeReproducibility(recipe)
+		if result.Deterministic {
+			t.Error("expected non-deterministic for override-steps")
+		}
+		found := false
+		for _, w := range result.Warnings {
+			if strings.Contains(w, "override-steps") {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("expected warning about override-steps")
+		}
+	})
 }

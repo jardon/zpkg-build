@@ -839,10 +839,19 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	}
 
 	if stage == "build" || stage == "all" {
-		pluginCommands := b.activePlugin.GetBuildCommands()
+		var buildCommands []string
+		if b.manifest.Build.OverrideSteps != "" {
+			buildCommands = strings.Split(b.manifest.Build.OverrideSteps, "\n")
+		} else {
+			buildCommands = b.activePlugin.GetBuildCommands()
+		}
 
 		fmt.Println("    Running build steps...")
-		for _, cmd := range pluginCommands {
+		for _, cmd := range buildCommands {
+			cmd = strings.TrimSpace(cmd)
+			if cmd == "" {
+				continue
+			}
 			fmt.Printf("      > %s\n", cmd)
 			if err := eng.Run(ctx, engine.RunConfig{
 				EnvVars:    envVars,
