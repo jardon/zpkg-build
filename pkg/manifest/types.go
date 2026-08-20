@@ -43,6 +43,7 @@ type SourceBlock struct {
 type BuildBlock struct {
 	Env           map[string]string `yaml:"env,omitempty"`
 	OverrideSteps string            `yaml:"override-steps,omitempty"`
+	Dependencies  []Dependency      `yaml:"dependencies,omitempty"`
 }
 
 type RecipeManifest struct {
@@ -56,7 +57,6 @@ type RecipeManifest struct {
 	Base         string              `yaml:"base"`
 	Plugin       plugin.PluginSource `yaml:"plugin"`
 	Build        BuildBlock          `yaml:"build"`
-	BuildDeps    []Dependency        `yaml:"build_deps,omitempty"`
 	RuntimeDeps  []Dependency        `yaml:"runtime_deps,omitempty"`
 	Package      map[string][]string `yaml:"package"`
 }

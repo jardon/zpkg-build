@@ -187,7 +187,7 @@ func (b *Builder) computeSourceHash() (string, error) {
 		hash.Write([]byte(manifest.PatchChecksum(patch)))
 	}
 
-	for _, dep := range b.manifest.BuildDeps {
+	for _, dep := range b.manifest.Build.Dependencies {
 		if dep.Source != "" {
 			hash.Write([]byte(dep.Source + ":" + depChecksum(dep)))
 		}
@@ -377,7 +377,7 @@ func (b *Builder) Pull(ctx context.Context) error {
 		}
 	}
 
-	for _, dep := range b.manifest.BuildDeps {
+	for _, dep := range b.manifest.Build.Dependencies {
 		if dep.Source == "" {
 			continue
 		}
@@ -764,7 +764,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 		}
 	}
 
-	for _, dep := range b.manifest.BuildDeps {
+	for _, dep := range b.manifest.Build.Dependencies {
 		if dep.Source == "" {
 			continue
 		}
@@ -841,7 +841,7 @@ func (b *Builder) runInEngine(ctx context.Context, stage string) error {
 	if stage == "build" || stage == "all" {
 		var buildCommands []string
 		if b.manifest.Build.OverrideSteps != "" {
-			buildCommands = strings.Split(b.manifest.Build.OverrideSteps, "\n")
+			buildCommands = []string{b.manifest.Build.OverrideSteps}
 		} else {
 			buildCommands = b.activePlugin.GetBuildCommands()
 		}
@@ -897,7 +897,7 @@ func (b *Builder) Package(ctx context.Context) error {
 			b.rawRecipe,
 			b.manifest.Plugin,
 			b.manifest.EffectiveLicenses(),
-			b.manifest.BuildDeps,
+			b.manifest.Build.Dependencies,
 			b.manifest.RuntimeDeps,
 		); err != nil {
 			return err

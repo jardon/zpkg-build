@@ -64,7 +64,7 @@ func LoadAndHydrateManifest(manifestPath string, _ any) (*RecipeManifest, string
 		}
 	}
 
-	for _, dep := range manifest.BuildDeps {
+	for _, dep := range manifest.Build.Dependencies {
 		if dep.Source != "" {
 			hasSHA := len(dep.SHA256) == 64
 			hasMD5 := len(dep.MD5) == 32

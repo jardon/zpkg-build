@@ -20,6 +20,10 @@ type FileMeta struct {
 	SHA256    string `json:"sha256,omitempty"`
 }
 
+type BuildMetadata struct {
+	Dependencies []manifest.Dependency `json:"dependencies,omitempty"`
+}
+
 type PackageMetadata struct {
 	Name            string                   `json:"name"`
 	Version         string                   `json:"version"`
@@ -28,12 +32,12 @@ type PackageMetadata struct {
 	BuiltAt         time.Time                `json:"built_at"`
 	Plugin          plugin.PluginSource      `json:"plugin"`
 	Licenses        []manifest.License       `json:"licenses,omitempty"`
-	BuildDeps       []manifest.Dependency    `json:"build_deps,omitempty"`
+	Build           BuildMetadata            `json:"build,omitempty"`
 	RuntimeDeps     []manifest.Dependency    `json:"runtime_deps,omitempty"`
 	Contents        []FileMeta               `json:"contents"`
 }
 
-func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe map[string]interface{}, toolchain plugin.PluginSource, licenses []manifest.License, buildDeps, runtimeDeps []manifest.Dependency) error {
+func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe map[string]interface{}, toolchain plugin.PluginSource, licenses []manifest.License, buildDeps []manifest.Dependency, runtimeDeps []manifest.Dependency) error {
 	var files []FileMeta
 
 	err := filepath.Walk(pkgDir, func(path string, info os.FileInfo, err error) error {
@@ -85,7 +89,7 @@ func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe 
 		BuiltAt:         time.Now().UTC(),
 		Plugin:          toolchain,
 		Licenses:        licenses,
-		BuildDeps:       buildDeps,
+		Build:           BuildMetadata{Dependencies: buildDeps},
 		RuntimeDeps:     runtimeDeps,
 		Contents:        files,
 	}

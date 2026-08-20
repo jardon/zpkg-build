@@ -114,12 +114,13 @@ engine: podman
 base: "alpine:3.23@sha256:abc123"
 plugin:
   name: none
-build_deps:
-  - name: gmp
-    source: "https://example.com/gmp.tar.gz"
-    sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
-    extract-to: "/usr"
-    rename: "foo/bar"
+build:
+  dependencies:
+    - name: gmp
+      source: "https://example.com/gmp.tar.gz"
+      sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+      extract-to: "/usr"
+      rename: "foo/bar"
 `)
 		_, _, _, err := LoadAndHydrateManifest(path, nil)
 		if err == nil {
@@ -142,19 +143,20 @@ engine: podman
 base: "alpine:3.23@sha256:abc123"
 plugin:
   name: none
-build_deps:
-  - name: gmp
-    source: "https://example.com/gmp.tar.gz"
-    sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
-    extract-to: "/usr"
-    rename: "gmp"
+build:
+  dependencies:
+    - name: gmp
+      source: "https://example.com/gmp.tar.gz"
+      sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+      extract-to: "/usr"
+      rename: "gmp"
 `)
 		manifest, _, _, err := LoadAndHydrateManifest(path, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if manifest.BuildDeps[0].Rename != "gmp" {
-			t.Errorf("expected rename=gmp, got %q", manifest.BuildDeps[0].Rename)
+		if manifest.Build.Dependencies[0].Rename != "gmp" {
+			t.Errorf("expected rename=gmp, got %q", manifest.Build.Dependencies[0].Rename)
 		}
 	})
 
@@ -170,16 +172,17 @@ engine: podman
 base: "alpine:3.23@sha256:abc123"
 plugin:
   name: none
-build_deps:
-  - name: gmp
-    source: "https://example.com/gmp.tar.gz"
-    md5: "abcdef0123456789abcdef0123456789"
+build:
+  dependencies:
+    - name: gmp
+      source: "https://example.com/gmp.tar.gz"
+      md5: "abcdef0123456789abcdef0123456789"
 `)
 		manifest, _, _, err := LoadAndHydrateManifest(path, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if manifest.BuildDeps[0].MD5 != "abcdef0123456789abcdef0123456789" {
+		if manifest.Build.Dependencies[0].MD5 != "abcdef0123456789abcdef0123456789" {
 			t.Errorf("expected md5 on build dep")
 		}
 	})
@@ -196,9 +199,10 @@ engine: podman
 base: "alpine:3.23@sha256:abc123"
 plugin:
   name: none
-build_deps:
-  - name: gmp
-    source: "https://example.com/gmp.tar.gz"
+build:
+  dependencies:
+    - name: gmp
+      source: "https://example.com/gmp.tar.gz"
 `)
 		_, _, _, err := LoadAndHydrateManifest(path, nil)
 		if err == nil {
@@ -218,11 +222,12 @@ engine: podman
 base: "alpine:3.23@sha256:abc123"
 plugin:
   name: none
-build_deps:
-  - name: gmp
-    source: "https://example.com/gmp.tar.gz"
-    sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
-    extract-to: "relative/path"
+build:
+  dependencies:
+    - name: gmp
+      source: "https://example.com/gmp.tar.gz"
+      sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+      extract-to: "relative/path"
 `)
 		_, _, _, err := LoadAndHydrateManifest(path, nil)
 		if err == nil {
