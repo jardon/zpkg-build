@@ -46,19 +46,24 @@ type BuildBlock struct {
 	Dependencies  []Dependency      `yaml:"dependencies,omitempty"`
 }
 
+type PackageBlock struct {
+	Include      []string     `yaml:"include,omitempty"`
+	Exclude      []string     `yaml:"exclude,omitempty"`
+	Dependencies []Dependency `yaml:"dependencies,omitempty"`
+}
+
 type RecipeManifest struct {
-	Name         string              `yaml:"name"`
-	Version      string              `yaml:"version"`
-	Arch         string              `yaml:"arch"`
-	License      string              `yaml:"license,omitempty"`
-	Licenses     []License           `yaml:"licenses,omitempty"`
-	Source       SourceBlock         `yaml:"source"`
-	Engine       string              `yaml:"engine"`
-	Base         string              `yaml:"base"`
-	Plugin       plugin.PluginSource `yaml:"plugin"`
-	Build        BuildBlock          `yaml:"build"`
-	RuntimeDeps  []Dependency        `yaml:"runtime_deps,omitempty"`
-	Package      map[string][]string `yaml:"package"`
+	Name        string              `yaml:"name"`
+	Version     string              `yaml:"version"`
+	Arch        string              `yaml:"arch"`
+	License     string              `yaml:"license,omitempty"`
+	Licenses    []License           `yaml:"licenses,omitempty"`
+	Source      SourceBlock         `yaml:"source"`
+	Engine      string              `yaml:"engine"`
+	Base        string              `yaml:"base"`
+	Plugin      plugin.PluginSource `yaml:"plugin"`
+	Build       BuildBlock          `yaml:"build"`
+	Package     PackageBlock        `yaml:"package"`
 }
 
 func (m *RecipeManifest) EffectiveLicenses() []License {

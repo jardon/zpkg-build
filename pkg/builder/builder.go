@@ -898,7 +898,7 @@ func (b *Builder) Package(ctx context.Context) error {
 			b.manifest.Plugin,
 			b.manifest.EffectiveLicenses(),
 			b.manifest.Build.Dependencies,
-			b.manifest.RuntimeDeps,
+			b.manifest.Package.Dependencies,
 		); err != nil {
 			return err
 		}
@@ -916,8 +916,8 @@ func (b *Builder) assemblePackage() error {
 	destPath := b.destDir()
 	pkgPath := b.pkgDir()
 
-	includes := normalizePatterns(b.manifest.Package["include"])
-	excludes := normalizePatterns(b.manifest.Package["exclude"])
+	includes := normalizePatterns(b.manifest.Package.Include)
+	excludes := normalizePatterns(b.manifest.Package.Exclude)
 
 	return filepath.Walk(destPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
