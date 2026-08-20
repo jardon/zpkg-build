@@ -118,8 +118,8 @@ func TestGenerateMetadata(t *testing.T) {
 	if len(meta.Licenses) != 1 || meta.Licenses[0].Name != "MIT" {
 		t.Errorf("licenses = %v, want [MIT]", meta.Licenses)
 	}
-	if len(meta.BuildDeps) != 1 || meta.BuildDeps[0].Name != "make" {
-		t.Errorf("build_deps = %v, want [make]", meta.BuildDeps)
+	if len(meta.Build.Dependencies) != 1 || meta.Build.Dependencies[0].Name != "make" {
+		t.Errorf("build.dependencies = %v, want [make]", meta.Build.Dependencies)
 	}
 	if len(meta.RuntimeDeps) != 1 || meta.RuntimeDeps[0].Name != "libc" {
 		t.Errorf("runtime_deps = %v, want [libc]", meta.RuntimeDeps)
