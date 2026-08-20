@@ -17,7 +17,7 @@ func (p *PoetryPlugin) GetPostExtractSteps() []string {
 
 func (p *PoetryPlugin) GetEnvVars() map[string]string {
 	return map[string]string{
-		"PATH":       "/usr/local/bin:/usr/local/poetry/bin:$PATH",
+		"PATH":        "/usr/local/bin:/usr/local/poetry/bin:$PATH",
 		"POETRY_HOME": "/usr/local/poetry",
 	}
 }

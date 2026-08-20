@@ -94,9 +94,9 @@ func TestTopLevelDir(t *testing.T) {
 	t.Run("tar with top-level dir", func(t *testing.T) {
 		dir := t.TempDir()
 		path := createTestTarGz(t, dir, map[string]string{
-			"gmp-6.3.0/configure":  "#!/bin/sh",
-			"gmp-6.3.0/Makefile":   "all:",
-			"gmp-6.3.0/README":     "readme",
+			"gmp-6.3.0/configure": "#!/bin/sh",
+			"gmp-6.3.0/Makefile":  "all:",
+			"gmp-6.3.0/README":    "readme",
 		})
 
 		got, err := TopLevelDir(path)
@@ -134,8 +134,8 @@ func TestTopLevelDir(t *testing.T) {
 func TestExtractArchive(t *testing.T) {
 	dir := t.TempDir()
 	path := createTestTarGz(t, dir, map[string]string{
-		"gmp-6.3.0/configure":  "#!/bin/sh",
-		"gmp-6.3.0/README":     "readme",
+		"gmp-6.3.0/configure": "#!/bin/sh",
+		"gmp-6.3.0/README":    "readme",
 	})
 
 	dest := filepath.Join(dir, "extracted")
@@ -157,8 +157,8 @@ func TestExtractArchive(t *testing.T) {
 func TestExtractArchiveStrip(t *testing.T) {
 	dir := t.TempDir()
 	path := createTestTarGz(t, dir, map[string]string{
-		"gmp-6.3.0/configure":  "#!/bin/sh",
-		"gmp-6.3.0/README":     "readme",
+		"gmp-6.3.0/configure": "#!/bin/sh",
+		"gmp-6.3.0/README":    "readme",
 	})
 
 	dest := filepath.Join(dir, "extracted")

@@ -4,10 +4,10 @@ type NoOpPlugin struct {
 	source PluginSource
 }
 
-func (p *NoOpPlugin) Name() string                                  { return "none" }
-func (p *NoOpPlugin) Version() string                               { return "" }
-func (p *NoOpPlugin) GetExtractPath() string                { return "" }
-func (p *NoOpPlugin) GetPostExtractSteps() []string         { return nil }
-func (p *NoOpPlugin) GetEnvVars() map[string]string         { return make(map[string]string) }
-func (p *NoOpPlugin) GetCacheDirectories() []PackageCache   { return nil }
-func (p *NoOpPlugin) GetBuildCommands() []string { return nil }
+func (p *NoOpPlugin) Name() string                        { return "none" }
+func (p *NoOpPlugin) Version() string                     { return "" }
+func (p *NoOpPlugin) GetExtractPath() string              { return "" }
+func (p *NoOpPlugin) GetPostExtractSteps() []string       { return nil }
+func (p *NoOpPlugin) GetEnvVars() map[string]string       { return make(map[string]string) }
+func (p *NoOpPlugin) GetCacheDirectories() []PackageCache { return nil }
+func (p *NoOpPlugin) GetBuildCommands() []string          { return nil }
