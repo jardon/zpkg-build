@@ -93,7 +93,7 @@ func (l *LXCEngine) Run(ctx context.Context, config RunConfig) error {
 			continue
 		}
 
-		args := []string{"sh", "-c", cmdStr}
+		args := []string{"bash", "-c", cmdStr}
 
 		options := lxc.DefaultAttachOptions
 		options.ClearEnv = false
@@ -131,7 +131,7 @@ func (l *LXCEngine) RunOutput(ctx context.Context, config RunConfig) (string, er
 
 		outputFile := fmt.Sprintf("/tmp/.zpkg-run-output-%d", os.Getpid())
 		wrappedCmd := fmt.Sprintf("%s > %s 2>/dev/null", cmdStr, outputFile)
-		args := []string{"sh", "-c", wrappedCmd}
+		args := []string{"bash", "-c", wrappedCmd}
 
 		options := lxc.DefaultAttachOptions
 		options.ClearEnv = false

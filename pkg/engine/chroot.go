@@ -209,7 +209,7 @@ func (c *ChrootEngine) Run(ctx context.Context, config RunConfig) error {
 			"--mount-proc=" + filepath.Join(c.rootfsPath, "proc"),
 			"chroot",
 			c.rootfsPath,
-			"sh", "-c",
+			"bash", "-c",
 			fmt.Sprintf("cd %s && %s", workDir, cmdStr),
 		}
 
@@ -265,7 +265,7 @@ func (c *ChrootEngine) RunOutput(ctx context.Context, config RunConfig) (string,
 			"--mount-proc=" + filepath.Join(c.rootfsPath, "proc"),
 			"chroot",
 			c.rootfsPath,
-			"sh", "-c",
+			"bash", "-c",
 			fmt.Sprintf("cd %s && %s", workDir, cmdStr),
 		}
 
