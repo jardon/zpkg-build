@@ -23,20 +23,20 @@ import (
 )
 
 type Builder struct {
-	manifestPath   string
-	cacheDir       string
-	manifest       *manifest.RecipeManifest
-	rawRecipe      map[string]interface{}
-	recipeHash     string
-	sourceHash     string
+	manifestPath    string
+	cacheDir        string
+	manifest        *manifest.RecipeManifest
+	rawRecipe       map[string]interface{}
+	recipeHash      string
+	sourceHash      string
 	reproducibility manifest.Reproducibility
-	activePlugin   plugin.Plugin
-	engine         engine.Engine
-	workspace      string
-	outputDir      string
-	exportFormat   string
-	noArchive      bool
-	keepContainer  bool
+	activePlugin    plugin.Plugin
+	engine          engine.Engine
+	workspace       string
+	outputDir       string
+	exportFormat    string
+	noArchive       bool
+	keepContainer   bool
 }
 
 func New(manifestPath string) (*Builder, error) {
@@ -74,12 +74,12 @@ func NewFromManifest(manifestPath string, m *manifest.RecipeManifest, rawRecipe 
 	}
 
 	b := &Builder{
-		manifestPath:   manifestPath,
-		cacheDir:       cacheDir,
-		manifest:       m,
-		rawRecipe:      rawRecipe,
-		recipeHash:     recipeHash,
-		activePlugin:   plugin.GetPlugin(m.Plugin),
+		manifestPath:    manifestPath,
+		cacheDir:        cacheDir,
+		manifest:        m,
+		rawRecipe:       rawRecipe,
+		recipeHash:      recipeHash,
+		activePlugin:    plugin.GetPlugin(m.Plugin),
 		reproducibility: manifest.AnalyzeReproducibility(rawRecipe),
 	}
 
@@ -1337,11 +1337,11 @@ func (b *Builder) Clean(step string) error {
 			}
 		}
 		if found || s == targetStep {
-	for _, dir := range dirsToClean[s] {
-		fmt.Printf("    Cleaning: %s\n", dir)
-		_ = os.RemoveAll(dir)
-		_ = os.MkdirAll(dir, 0755)
-	}
+			for _, dir := range dirsToClean[s] {
+				fmt.Printf("    Cleaning: %s\n", dir)
+				_ = os.RemoveAll(dir)
+				_ = os.MkdirAll(dir, 0755)
+			}
 		}
 	}
 

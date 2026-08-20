@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/jardon/zpkg-build/pkg/builder"
 	"github.com/jardon/zpkg-build/pkg/manifest"
+	"github.com/spf13/cobra"
 )
 
 var manifestFile string

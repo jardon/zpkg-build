@@ -65,9 +65,9 @@ func TestNewWithManifest(t *testing.T) {
 			URL:    "https://example.com/src.tar.gz",
 			SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
-		Engine: "podman",
-		Base:   "alpine:3.23@sha256:abc123",
-		Plugin: plugin.PluginSource{Name: "none"},
+		Engine:   "podman",
+		Base:     "alpine:3.23@sha256:abc123",
+		Plugin:   plugin.PluginSource{Name: "none"},
 		Licenses: []manifest.License{{Name: "MIT"}},
 	}
 
@@ -138,9 +138,9 @@ plugin:
 `), 0644)
 
 	c, err := New(manifestPath, Options{
-		OutputDir:    "/tmp/output",
-		ExportFormat: "tar.xz",
-		NoArchive:    true,
+		OutputDir:     "/tmp/output",
+		ExportFormat:  "tar.xz",
+		NoArchive:     true,
 		KeepContainer: true,
 	})
 	if err != nil {

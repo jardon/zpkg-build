@@ -113,11 +113,11 @@ func TestGetPlugin(t *testing.T) {
 
 func TestCommandWithArgs(t *testing.T) {
 	tests := []struct {
-		name         string
-		prefix       string
-		args         []string
-		defaultArgs  string
-		expect       string
+		name        string
+		prefix      string
+		args        []string
+		defaultArgs string
+		expect      string
 	}{
 		{"with custom args", "go build", []string{"-v", "-o", "bin"}, "", "go build -v -o bin"},
 		{"with default args", "go build", nil, "-v -o bin", "go build -v -o bin"},

@@ -4,12 +4,12 @@ type MakePlugin struct {
 	source PluginSource
 }
 
-func (p *MakePlugin) Name() string                             { return "make" }
-func (p *MakePlugin) Version() string                          { return p.source.Version }
+func (p *MakePlugin) Name() string                        { return "make" }
+func (p *MakePlugin) Version() string                     { return p.source.Version }
 func (p *MakePlugin) GetExtractPath() string              { return "" }
-func (p *MakePlugin) GetPostExtractSteps() []string        { return nil }
-func (p *MakePlugin) GetEnvVars() map[string]string        { return make(map[string]string) }
-func (p *MakePlugin) GetCacheDirectories() []PackageCache  { return nil }
+func (p *MakePlugin) GetPostExtractSteps() []string       { return nil }
+func (p *MakePlugin) GetEnvVars() map[string]string       { return make(map[string]string) }
+func (p *MakePlugin) GetCacheDirectories() []PackageCache { return nil }
 
 func (p *MakePlugin) GetBuildCommands() []string {
 	return []string{
