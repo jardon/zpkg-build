@@ -123,7 +123,7 @@ func (p *PodmanEngine) Run(ctx context.Context, config RunConfig) error {
 		}
 		fullCmd += "; " + cmd
 
-		args := []string{"sh", "-c", fullCmd}
+		args := []string{"bash", "-c", fullCmd}
 
 		createConfig := &handlers.ExecCreateConfig{}
 		createConfig.AttachStdout = true
@@ -193,7 +193,7 @@ func (p *PodmanEngine) RunOutput(ctx context.Context, config RunConfig) (string,
 		}
 		fullCmd += "; " + cmd
 
-		args := []string{"sh", "-c", fullCmd}
+		args := []string{"bash", "-c", fullCmd}
 
 		createConfig := &handlers.ExecCreateConfig{}
 		createConfig.AttachStdout = true

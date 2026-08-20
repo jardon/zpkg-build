@@ -153,7 +153,7 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 		fullCmd += "; " + cmdStr
 
 		execCfg := container.ExecOptions{
-			Cmd:          []string{"sh", "-c", fullCmd},
+			Cmd:          []string{"bash", "-c", fullCmd},
 			AttachStdout: true,
 			AttachStderr: true,
 		}
@@ -217,7 +217,7 @@ func (d *DockerEngine) RunOutput(ctx context.Context, config RunConfig) (string,
 		fullCmd += "; " + cmdStr
 
 		execCfg := container.ExecOptions{
-			Cmd:          []string{"sh", "-c", fullCmd},
+			Cmd:          []string{"bash", "-c", fullCmd},
 			AttachStdout: true,
 			AttachStderr: true,
 		}
