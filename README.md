@@ -94,13 +94,12 @@ build:
       sha256: "abc123..."
       extract-to: "/usr"
 
-runtime_deps:
-  - name: "libc"
-    min: "2.31"
-
 package:
   include:
     - "/usr/bin/app"
+  dependencies:
+    - name: "libc"
+      min: "2.31"
 ```
 
 ### Licenses

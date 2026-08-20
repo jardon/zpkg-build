@@ -24,6 +24,10 @@ type BuildMetadata struct {
 	Dependencies []manifest.Dependency `json:"dependencies,omitempty"`
 }
 
+type PackageSection struct {
+	Dependencies []manifest.Dependency `json:"dependencies,omitempty"`
+}
+
 type PackageMetadata struct {
 	Name            string                   `json:"name"`
 	Version         string                   `json:"version"`
@@ -33,7 +37,7 @@ type PackageMetadata struct {
 	Plugin          plugin.PluginSource      `json:"plugin"`
 	Licenses        []manifest.License       `json:"licenses,omitempty"`
 	Build           BuildMetadata            `json:"build,omitempty"`
-	RuntimeDeps     []manifest.Dependency    `json:"runtime_deps,omitempty"`
+	Package         PackageSection           `json:"package,omitempty"`
 	Contents        []FileMeta               `json:"contents"`
 }
 
@@ -90,7 +94,7 @@ func GenerateMetadata(pkgName, pkgVersion, pkgDir, recipeHash string, rawRecipe 
 		Plugin:          toolchain,
 		Licenses:        licenses,
 		Build:           BuildMetadata{Dependencies: buildDeps},
-		RuntimeDeps:     runtimeDeps,
+		Package:         PackageSection{Dependencies: runtimeDeps},
 		Contents:        files,
 	}
 

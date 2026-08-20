@@ -121,8 +121,8 @@ func TestGenerateMetadata(t *testing.T) {
 	if len(meta.Build.Dependencies) != 1 || meta.Build.Dependencies[0].Name != "make" {
 		t.Errorf("build.dependencies = %v, want [make]", meta.Build.Dependencies)
 	}
-	if len(meta.RuntimeDeps) != 1 || meta.RuntimeDeps[0].Name != "libc" {
-		t.Errorf("runtime_deps = %v, want [libc]", meta.RuntimeDeps)
+	if len(meta.Package.Dependencies) != 1 || meta.Package.Dependencies[0].Name != "libc" {
+		t.Errorf("package.dependencies = %v, want [libc]", meta.Package.Dependencies)
 	}
 	if meta.Plugin.Name != "make" {
 		t.Errorf("plugin.name = %q, want %q", meta.Plugin.Name, "make")
