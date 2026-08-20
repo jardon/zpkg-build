@@ -26,6 +26,26 @@ jobs:
           go-version: '1.25.6'
       - run: go vet ./...
 
+  fmt:
+    name: go fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y podman libbtrfs-dev libgpgme-dev libgpgme-dev lxc-dev lxc
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.6'
+      - run: |
+          if [ -n "$(gofmt -l .)" ]; then
+              echo "The following files are not formatted:"
+              gofmt -l .
+              exit 1
+          fi
+
+
   yamllint:
     runs-on: ubuntu-latest
     steps:
