@@ -955,6 +955,17 @@ func (b *Builder) assemblePackage() error {
 			return os.MkdirAll(dest, info.Mode())
 		}
 
+		if info.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+				return err
+			}
+			return os.Symlink(target, dest)
+		}
+
 		return copyFile(path, dest)
 	})
 }
