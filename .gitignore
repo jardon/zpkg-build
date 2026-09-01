@@ -34,5 +34,6 @@ go.work.sum
 *.zip
 *.zpkg
 *.tar.gz
+*.tar.xz
 zpkg-build
 !cmd/zpkg-build
