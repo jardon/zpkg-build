@@ -1,0 +1,40 @@
+name: "hello-world-golang"
+version: "1.0.0"
+licenses:
+  - name: "MIT"
+  - name: "Apache-2.0"
+arch: amd64
+
+source:
+  git: "https://github.com/dockersamples/helloworld-go-demo"
+  ref: "main"
+
+engine: "podman"
+base: "ubuntu:resolute"
+
+plugin:
+  name: "golang"
+  version: "1.20.0"
+  source: "https://go.dev/dl/go1.20.linux-amd64.tar.gz"
+  sha256: "5a9ebcc65c1cce56e0d2dc616aff4c4cedcfbda8cc6f0288cc08cda3b18dcbf1"
+  go-build-args:
+    - "-trimpath"
+    - "-ldflags=-s"
+    - "-o"
+    - "$ZPKG_DEST/usr/bin/hello"
+    - "main.go"
+
+build:
+  dependencies:
+    - name: "gcc"
+      min: "12.0"
+
+package:
+  include:
+     - "/usr/bin/hello"
+  dependencies:
+    - name: "libc"
+      min: "2.31"
+
+export:
+  format: "tar.gz"
