@@ -1,0 +1,18 @@
+name: hello-world-poetry
+version: 1.0.0
+license: MIT
+arch: amd64
+
+source:
+  git: https://github.com/essembeh/python-helloworld.git
+  ref: main
+
+engine: lxc
+base: ubuntu:resolute
+
+plugin:
+  name: poetry
+  version: 2.4.1
+  source: https://github.com/python-poetry/poetry/releases/download/2.4.1/poetry-2.4.1.tar.gz
+  sha256: 189399b80347ecf908244b2564a7b1d92b648fa1fe2a204888f94a472fec0cac
+

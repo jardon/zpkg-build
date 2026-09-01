@@ -1,0 +1,18 @@
+name: rust-hello-world
+version: 1.0.0
+license: MIT
+arch: amd64
+
+source:
+  git: https://github.com/meta-rust/rust-hello-world.git
+  ref: master
+
+engine: podman
+base: rust:1.97.1-slim-bookworm@sha256:2775a09d208ff0d7c1f50490c45b62db929e87ba1dcbc3f2132ac71a704bcdd3
+
+plugin:
+  name: rust
+  version: 1.97.1
+  source: https://static.rust-lang.org/dist/rust-1.97.1-x86_64-unknown-linux-gnu.tar.xz
+  sha256: 88f28fa9af20594179f85d6df67078dfd6fa93e2f6da5e1e9b0ac4997988ca4f
+
