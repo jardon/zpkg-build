@@ -220,6 +220,35 @@ func (b *Builder) stateTracker() *config.Tracker {
 	return config.NewTracker(b.workspace)
 }
 
+func (b *Builder) dirsForStep(step config.Step) []string {
+	switch step {
+	case config.StepPull:
+		return []string{filepath.Join(b.workspace, "components", b.manifest.Name, "src")}
+	case config.StepBuild:
+		return []string{
+			filepath.Join(b.workspace, "components", b.manifest.Name, "build"),
+			filepath.Join(b.workspace, "components", b.manifest.Name, "dest"),
+		}
+	case config.StepPackage:
+		return []string{b.pkgDir()}
+	case config.StepExport:
+		return []string{b.exportDir()}
+	}
+	return nil
+}
+
+func (b *Builder) cleanStepDirs(step config.Step) error {
+	for _, dir := range b.dirsForStep(step) {
+		if err := os.RemoveAll(dir); err != nil {
+			return err
+		}
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type KeptEngine struct {
 	Engine string `json:"engine"`
 	ID     string `json:"id"`
@@ -349,6 +378,10 @@ func (b *Builder) Pull(ctx context.Context) error {
 	if tracker.IsStepCached(config.StepPull, b.sourceHash, b.recipeHash) {
 		fmt.Println("    pull stage cached, skipping")
 		return nil
+	}
+
+	if err := b.cleanStepDirs(config.StepPull); err != nil {
+		return err
 	}
 
 	if b.manifest.Source.Git != "" {
@@ -627,6 +660,10 @@ func (b *Builder) Build(ctx context.Context) error {
 		return nil
 	}
 
+	if err := b.cleanStepDirs(config.StepBuild); err != nil {
+		return err
+	}
+
 	if err := b.syncSrcToBuild(); err != nil {
 		return err
 	}
@@ -876,6 +913,10 @@ func (b *Builder) Package(ctx context.Context) error {
 	if tracker.IsStepCached(config.StepPackage, b.sourceHash, b.recipeHash) {
 		fmt.Println("    package stage cached, skipping")
 		return nil
+	}
+
+	if err := b.cleanStepDirs(config.StepPackage); err != nil {
+		return err
 	}
 
 	fmt.Println("    Assembling package...")
@@ -1152,6 +1193,10 @@ func (b *Builder) Export(ctx context.Context) error {
 		return nil
 	}
 
+	if err := b.cleanStepDirs(config.StepExport); err != nil {
+		return err
+	}
+
 	outputDir := b.outputDir
 	if outputDir == "" {
 		outputDir = "."
@@ -1321,20 +1366,9 @@ func (b *Builder) Clean(step string) error {
 		return err
 	}
 
-	dirsToClean := map[config.Step][]string{
-		config.StepPull: {
-			filepath.Join(b.workspace, "components", b.manifest.Name, "src"),
-		},
-		config.StepBuild: {
-			filepath.Join(b.workspace, "components", b.manifest.Name, "build"),
-			filepath.Join(b.workspace, "components", b.manifest.Name, "dest"),
-		},
-		config.StepPackage: {
-			filepath.Join(b.workspace, "pkg"),
-		},
-		config.StepExport: {
-			filepath.Join(b.workspace, "export"),
-		},
+	dirsToClean := make(map[config.Step][]string)
+	for _, s := range config.StepOrder {
+		dirsToClean[s] = b.dirsForStep(s)
 	}
 
 	for _, s := range config.StepOrder {
