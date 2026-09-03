@@ -1146,11 +1146,6 @@ func (b *Builder) Export(ctx context.Context) error {
 	}
 
 	fmt.Println("==> Stage: export")
-	tracker := b.stateTracker()
-	if tracker.IsStepCached(config.StepExport, b.sourceHash, b.recipeHash) {
-		fmt.Println("    export stage cached, skipping")
-		return nil
-	}
 
 	outputDir := b.outputDir
 	if outputDir == "" {
@@ -1169,10 +1164,6 @@ func (b *Builder) Export(ctx context.Context) error {
 	if b.noArchive {
 		fmt.Println("    Copying package contents to output directory...")
 		if err := b.copyPackageToOutput(outputDir); err != nil {
-			return err
-		}
-
-		if err := tracker.MarkStepComplete(config.StepExport, b.sourceHash, b.recipeHash); err != nil {
 			return err
 		}
 
@@ -1214,10 +1205,6 @@ func (b *Builder) Export(ctx context.Context) error {
 		}
 	default:
 		return fmt.Errorf("unsupported export format: %s", format)
-	}
-
-	if err := tracker.MarkStepComplete(config.StepExport, b.sourceHash, b.recipeHash); err != nil {
-		return err
 	}
 
 	fmt.Printf("    Exported to: %s\n", archivePath)
