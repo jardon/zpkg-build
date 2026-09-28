@@ -146,9 +146,9 @@ func (d *DockerEngine) Run(ctx context.Context, config RunConfig) error {
 		for k, v := range merged {
 			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
 		}
-		fullCmd := strings.Join(exports, "; ")
+		fullCmd := "set -e; " + strings.Join(exports, "; ")
 		if config.WorkingDir != "" {
-			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+			fullCmd += fmt.Sprintf("; cd %q", config.WorkingDir)
 		}
 		fullCmd += "; " + cmdStr
 
@@ -210,9 +210,9 @@ func (d *DockerEngine) RunOutput(ctx context.Context, config RunConfig) (string,
 		for k, v := range merged {
 			exports = append(exports, fmt.Sprintf("export %s=%q", k, v))
 		}
-		fullCmd := strings.Join(exports, "; ")
+		fullCmd := "set -e; " + strings.Join(exports, "; ")
 		if config.WorkingDir != "" {
-			fullCmd += fmt.Sprintf("; cd %s", config.WorkingDir)
+			fullCmd += fmt.Sprintf("; cd %q", config.WorkingDir)
 		}
 		fullCmd += "; " + cmdStr
 

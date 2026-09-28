@@ -210,7 +210,7 @@ func (c *ChrootEngine) Run(ctx context.Context, config RunConfig) error {
 			"chroot",
 			c.rootfsPath,
 			"bash", "-c",
-			fmt.Sprintf("cd %s && %s", workDir, cmdStr),
+			fmt.Sprintf("set -e; cd %q && %s", workDir, cmdStr),
 		}
 
 		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -266,7 +266,7 @@ func (c *ChrootEngine) RunOutput(ctx context.Context, config RunConfig) (string,
 			"chroot",
 			c.rootfsPath,
 			"bash", "-c",
-			fmt.Sprintf("cd %s && %s", workDir, cmdStr),
+			fmt.Sprintf("set -e; cd %q && %s", workDir, cmdStr),
 		}
 
 		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
